@@ -1,0 +1,5 @@
+# 不需要进版本库的文件
+dist/
+班次闹钟.html
+*.py
+.workbuddy/

@@ -1,0 +1,17 @@
+{
+  "name": "班次闹钟工作台",
+  "short_name": "班次闹钟",
+  "description": "按排班日历自动推算上班闹钟，可导出到手机日历",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080a16",
+  "theme_color": "#0b0d1a",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
