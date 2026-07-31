@@ -3,3 +3,5 @@ dist/
 班次闹钟.html
 *.py
 .workbuddy/
+.deploy_token
+deploy.sh
