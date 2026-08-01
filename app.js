@@ -854,7 +854,7 @@
     const fileName = '我的排班闹钟.ics';
     const type = 'text/calendar';
 
-    // iOS：Web Share 对 .ics 识别差，分享面板不会出「日历」，直接打开更稳
+    // iOS：用 Web Share 分享 .ics 文件，系统面板直接出「日历」
     if (isIOS) {
       openIcsOnIOS(r, fileName, type);
       return;
@@ -880,60 +880,22 @@
   }
 
   function openIcsOnIOS(r, fileName, type) {
-    // iOS 对 .ics 的导入非常挑剔：
-    // 1. blob URL + a.click 不会唤起日历；
-    // 2. window.open + document.write('text/calendar') 在某些版本会直接把源码当文本显示；
-    // 3. data URI 跳转相对最稳，能触发系统日历弹窗。
-    const isStandalone = window.navigator.standalone === true;
-
-    // 方案 A：Web Share 文件（iOS 13+ 支持分享文件到日历，且不覆盖当前页）
-    try {
-      if (navigator.canShare && window.File) {
+    // iOS 上唯一可靠路径：Web Share 分享 .ics 文件，
+    // 系统会弹出分享面板并直接列出「日历」「提醒事项」，点一下即导入。
+    // 同时覆盖 Safari 普通标签与 PWA（主屏）两种打开方式。
+    if (navigator.share && window.File) {
+      try {
         const file = new File([r.text], fileName, { type: type });
-        if (navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file], title: '我的排班闹钟' })
-            .then(() => toast('已分享 ' + r.count + ' 天 · 请选择「日历」导入'))
-            .catch((err) => {
-              if (err && err.name === 'AbortError') return;
-              openIcsDataURI(r, type);
-            });
-          return;
-        }
-      }
-    } catch (e) { /* 继续降级 */ }
-
-    // 方案 B：data URI 跳转（兼容旧 iOS / PWA）
-    openIcsDataURI(r, type);
-  }
-
-  function openIcsDataURI(r, type) {
-    try {
-      const b64 = btoa(unescape(encodeURIComponent(r.text)));
-      const uri = 'data:' + type + ';base64,' + b64;
-
-      // PWA 模式下 window.open 行为异常，容易覆盖当前页；
-      // 用 iframe 加载 data URI 可保留当前页，同时让系统识别为日历文件。
-      if (window.navigator.standalone === true) {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = uri;
-        document.body.appendChild(iframe);
-        setTimeout(() => iframe.remove(), 3000);
-        toast('请选择「日历」导入 ' + r.count + ' 天排班');
+        navigator.share({ files: [file], title: '我的排班闹钟' })
+          .then(() => toast('请选择「日历」导入 ' + r.count + ' 天排班'))
+          .catch((err) => {
+            if (err && err.name === 'AbortError') return;   // 用户主动取消
+            showIcsFallback(r, type);                        // 降级：按钮 + 复制
+          });
         return;
-      }
-
-      // Safari 普通标签页：data URI 跳转可触发日历
-      const a = document.createElement('a');
-      a.href = uri;
-      a.target = '_blank';
-      document.body.appendChild(a); a.click();
-      setTimeout(() => a.remove(), 500);
-      toast('请选择「日历」导入 ' + r.count + ' 天排班');
-      return;
-    } catch (e) { /* 走兜底 */ }
-
-    showIcsFallback(r);
+      } catch (e) { /* 走兜底 */ }
+    }
+    showIcsFallback(r, type);
   }
 
   function tryDownload(r, fileName, type) {
@@ -951,12 +913,10 @@
     }
   }
 
-  /** 兜底：给一个真实可点击的「在日历中打开」链接 + 复制全文 */
-  function showIcsFallback(r) {
+  /** 兜底：给一个真实可点击的「在日历中打开」链接（data URI）+ 复制全文 */
+  function showIcsFallback(r, type) {
     $('#icsText').value = r.text;
     $('#icsCount').textContent = r.count + ' 天';
-    const blob = new Blob([r.text], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
     let a = document.getElementById('icsOpen');
     if (!a) {
       a = document.createElement('a');
@@ -964,10 +924,19 @@
       a.className = 'btn-full grad';
       a.textContent = '在日历中打开（点此）';
       a.style.marginBottom = '12px';
+      a.target = '_blank';
       $('#icsText').parentNode.insertBefore(a, $('#icsText'));
     }
-    a.href = url;
+    // 优先用 data URI：iOS 点击可能直接唤起日历；失败退回 blob
+    try {
+      const b64 = btoa(unescape(encodeURIComponent(r.text)));
+      a.href = 'data:' + type + ';base64,' + b64;
+    } catch (e) {
+      const blob = new Blob([r.text], { type: type + ';charset=utf-8' });
+      a.href = URL.createObjectURL(blob);
+    }
     openSheet('#sheetIcs');
+    toast('若未自动弹出日历，请点上方按钮，或复制内容用「文件」App 打开');
   }
 
   $('#icsClose').addEventListener('click', closeSheets);
