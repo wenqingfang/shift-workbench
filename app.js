@@ -168,6 +168,15 @@
       num.textContent = d.getDate();
       cell.appendChild(num);
 
+      const hol = holidayOf(key);
+      if (hol) {
+        const hb = document.createElement('span');
+        hb.className = 'hbadge ' + (hol.type === 'holiday' ? 'h' : 'w');
+        hb.textContent = hol.type === 'holiday' ? '休' : '班';
+        hb.title = hol.name;
+        cell.appendChild(hb);
+      }
+
       if (sh) {
         const tag = document.createElement('span');
         tag.className = 'dtag';
@@ -260,6 +269,168 @@
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
+  /* ================= 节假日（2026，国务院办公厅官方） ================= */
+  const HOLIDAYS = {};
+  [
+    ['元旦', '2026-01-01', '2026-01-03'],
+    ['春节', '2026-02-15', '2026-02-23'],
+    ['清明', '2026-04-04', '2026-04-06'],
+    ['劳动节', '2026-05-01', '2026-05-05'],
+    ['端午节', '2026-06-19', '2026-06-21'],
+    ['中秋节', '2026-09-25', '2026-09-27'],
+    ['国庆节', '2026-10-01', '2026-10-07']
+  ].forEach(([name, a, b]) => {
+    let d = parseYmd(a), e = parseYmd(b);
+    while (d <= e) { HOLIDAYS[ymd(d)] = { type: 'holiday', name }; d.setDate(d.getDate() + 1); }
+  });
+  [
+    ['元旦', '2026-01-04'], ['春节', '2026-02-14'], ['春节', '2026-02-28'],
+    ['劳动节', '2026-05-09'], ['中秋节', '2026-09-20'], ['国庆节', '2026-10-10']
+  ].forEach(([name, day]) => { HOLIDAYS[day] = { type: 'work', name }; });
+  function holidayOf(key) { return HOLIDAYS[key] || null; }
+
+  /* ================= 天气（Open-Meteo，免密钥 / 前端直连） ================= */
+  const WMO = { 0: '晴', 1: '大致晴朗', 2: '局部多云', 3: '阴', 45: '雾', 48: '雾凇', 51: '毛毛雨', 53: '毛毛雨', 55: '毛毛雨',
+    56: '冻毛毛雨', 57: '冻毛毛雨', 61: '小雨', 63: '中雨', 65: '大雨', 66: '冻雨', 67: '冻雨', 71: '小雪', 73: '中雪', 75: '大雪',
+    77: '米雪', 80: '阵雨', 81: '阵雨', 82: '强阵雨', 85: '阵雪', 86: '阵雪', 95: '雷阵雨', 96: '雷阵雨冰雹', 99: '雷阵雨冰雹' };
+  const WMO_ICO = { 0: '☀️', 1: '🌤️', 2: '⛅️', 3: '☁️', 45: '🌫️', 48: '🌫️', 51: '🌦️', 53: '🌦️', 55: '🌧️', 56: '🌧️', 57: '🌧️',
+    61: '🌧️', 63: '🌧️', 65: '🌧️', 66: '🌧️', 67: '🌧️', 71: '🌨️', 73: '🌨️', 75: '❄️', 77: '🌨️', 80: '🌦️', 81: '🌦️', 82: '⛈️',
+    85: '🌨️', 86: '🌨️', 95: '⛈️', 96: '⛈️', 99: '⛈️' };
+  function weatherTip(code, temp) {
+    if ([95, 96, 99].includes(code)) return '有雷阵雨，注意防雷避雨 ⛈️';
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return '有降雪，注意保暖防滑 ❄️';
+    if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return '今天有雨，记得带伞 ☔';
+    if ([45, 48].includes(code)) return '有雾，出行注意能见度 🌫️';
+    if (temp >= 33) return '高温暴晒，多喝水、注意防晒 🥵';
+    if (temp <= 5) return '气温偏低，记得添衣保暖 🧥';
+    if (temp >= 28) return '天气较热，注意防暑补水 🌞';
+    return '天气不错，注意劳逸结合 ☀️';
+  }
+
+  let todayWeather = null;   // 当前天气对象 {city,temp,code,hi,lo}
+
+  function loadWeatherCache() {
+    try {
+      const raw = localStorage.getItem('shiftWeather.v1');
+      if (raw) { const d = JSON.parse(raw); if (d.date === ymd(new Date())) todayWeather = d.w; }
+    } catch (e) { /* ignore */ }
+  }
+  function saveWeatherCache(w) {
+    try { localStorage.setItem('shiftWeather.v1', JSON.stringify({ date: ymd(new Date()), w: w })); } catch (e) { /* ignore */ }
+  }
+  function geocode(city) {
+    return fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(city) + '&count=1&language=zh')
+      .then((r) => r.json()).then((d) => {
+        if (!d.results || !d.results.length) throw new Error('no city');
+        const r0 = d.results[0];
+        return { lat: r0.latitude, lon: r0.longitude, name: r0.name };
+      });
+  }
+  function getCoords() {
+    return new Promise((resolve, reject) => {
+      if (S.lat && S.lon) return resolve({ lat: S.lat, lon: S.lon, name: S.city || '已设城市' });
+      if (S.city) { geocode(S.city).then(resolve).catch(reject); return; }
+      if (!navigator.geolocation) { geocode('上海').then(resolve).catch(reject); return; }
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude, name: '当前位置' }),
+        () => geocode('上海').then(resolve).catch(reject),
+        { timeout: 8000, maximumAge: 600000 }
+      );
+    });
+  }
+  function fetchWeather() {
+    getCoords().then((c) => {
+      const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + c.lat + '&longitude=' + c.lon +
+        '&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto';
+      return fetch(url).then((r) => r.json()).then((d) => {
+        const w = {
+          city: c.name,
+          temp: Math.round(d.current.temperature_2m),
+          code: d.current.weather_code,
+          hi: Math.round(d.daily.temperature_2m_max[0]),
+          lo: Math.round(d.daily.temperature_2m_min[0])
+        };
+        todayWeather = w; saveWeatherCache(w); renderWeather(); renderToday();
+      });
+    }).catch(() => { toast('天气获取失败，可在设置里手动填城市'); });
+  }
+  function renderWeather() {
+    if (!todayWeather) {
+      $('#wCity').textContent = '点刷新获取天气';
+      $('#wTemp').textContent = '--°';
+      $('#wCond').textContent = '--';
+      $('#wHiLo').textContent = '--/--';
+      $('#wIco').textContent = '🌤️';
+      return;
+    }
+    const w = todayWeather;
+    $('#wCity').textContent = w.city;
+    $('#wTemp').textContent = w.temp + '°';
+    $('#wCond').textContent = (WMO[w.code] || '未知');
+    $('#wHiLo').textContent = w.hi + '°/' + w.lo + '°';
+    $('#wIco').textContent = WMO_ICO[w.code] || '🌡️';
+  }
+
+  /* 今日贴心提醒（同时用于退出通知） */
+  function renderToday() {
+    const today = ymd(new Date());
+    const sh = shiftOf(today);
+    if (!sh) $('#tipShift').textContent = '💼 今天未排班';
+    else if (!sh.start) $('#tipShift').textContent = '💼 今天休息（' + sh.name + '）';
+    else {
+      const a = alarmAt(today, sh);
+      $('#tipShift').textContent = '💼 ' + sh.name + ' ' + sh.start + ' 上班' + (a ? '，闹钟 ' + hhmm(a) : '');
+    }
+    if (todayWeather) {
+      $('#tipWeather').textContent = '🌤 ' + todayWeather.city + ' ' + todayWeather.temp + '° ' +
+        (WMO[todayWeather.code] || '') + '：' + weatherTip(todayWeather.code, todayWeather.temp);
+    } else $('#tipWeather').textContent = '🌤 天气加载中…';
+    const hol = holidayOf(today);
+    if (hol) {
+      if (hol.type === 'holiday') $('#tipHoliday').textContent = '🎉 今天是' + hol.name + '，放假休息～';
+      else $('#tipHoliday').textContent = '⚠️ 今天' + hol.name + '调休上班，别忘啦';
+    } else $('#tipHoliday').textContent = '🎉 今天无特殊节假日';
+  }
+  function buildDailySummary() {
+    const today = ymd(new Date());
+    const sh = shiftOf(today);
+    const lines = [];
+    if (!sh) lines.push('💼 今天未排班');
+    else if (!sh.start) lines.push('💼 今天休息（' + sh.name + '）');
+    else { const a = alarmAt(today, sh); lines.push('💼 ' + sh.name + ' ' + sh.start + ' 上班' + (a ? '，闹钟 ' + hhmm(a) : '')); }
+    if (todayWeather) lines.push('🌤 ' + todayWeather.city + ' ' + todayWeather.temp + '° ' +
+      (WMO[todayWeather.code] || '') + '：' + weatherTip(todayWeather.code, todayWeather.temp));
+    else lines.push('🌤 天气未获取');
+    const hol = holidayOf(today);
+    if (hol) lines.push(hol.type === 'holiday' ? '🎉 今天是' + hol.name + '，放假休息～' : '⚠️ 今天' + hol.name + '调休上班，别忘啦');
+    else lines.push('🎉 今天无特殊节假日');
+    return lines;
+  }
+
+  /* 退出 / 切后台时，通过 Service Worker 弹通知（锁屏可见） */
+  let exitNotified = false;
+  function notifyOnExit() {
+    if (exitNotified) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const now = Date.now();
+    if (S.lastExit && now - S.lastExit < 120000) return;   // 2 分钟内不重复
+    const d = new Date();
+    const title = '今日提醒 · ' + (d.getMonth() + 1) + '/' + d.getDate();
+    sendSWNotification(title, buildDailySummary().join('\n'));
+    S.lastExit = now; save();
+    exitNotified = true;
+  }
+  function sendSWNotification(title, body) {
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.showNotification(title, { body: body, tag: 'daily-reminder', requireInteraction: false });
+      }).catch(() => fallbackNotify(title, body));
+    } else fallbackNotify(title, body);
+  }
+  function fallbackNotify(title, body) {
+    try { new Notification(title, { body: body, tag: 'daily-reminder' }); } catch (e) { /* ignore */ }
+  }
+
   /* ================= 渲染：闹钟列表 ================= */
   function renderAlarmList() {
     const list = upcomingAlarms(30).slice(0, 8);
@@ -310,6 +481,8 @@
     renderCalendar();
     renderAlarmList();
     renderPaint();
+    renderWeather();
+    renderToday();
     scheduleNextAlarm();
   }
 
@@ -329,6 +502,7 @@
 
   /* ================= 设置 ================= */
   function renderSettings() {
+    $('#cityInput').value = S.city || '';
     $('#leadRange').value = S.leadMinutes;
     $('#leadVal').textContent = S.leadMinutes + ' 分钟';
     $('#leadExample').textContent = minusLead('14:00');
@@ -367,6 +541,13 @@
   }
 
   $('#btnSettings').addEventListener('click', () => { renderSettings(); openSheet('#sheetSettings'); });
+  $('#btnWeatherRefresh').addEventListener('click', () => { fetchWeather(); toast('正在获取天气…'); });
+  $('#citySave').addEventListener('click', () => {
+    const v = $('#cityInput').value.trim();
+    if (!v) { toast('请输入城市名'); return; }
+    S.city = v; S.lat = null; S.lon = null; save();
+    fetchWeather(); toast('已切换城市：' + v);
+  });
   $('#leadRange').addEventListener('input', (e) => {
     S.leadMinutes = +e.target.value;
     $('#leadVal').textContent = S.leadMinutes + ' 分钟';
@@ -387,6 +568,18 @@
     if (!confirm('清空所有已排的班次？班次设置会保留')) return;
     S.schedule = {}; S.fired = {};
     save(); renderAll(); toast('已清空排班');
+  });
+  // 彻底清除：排班 + 班次设置 + Service Worker 缓存，全部清空并重置
+  $('#btnWipe').addEventListener('click', () => {
+    if (!confirm('彻底清除全部数据并重置为初始状态？\n（排班、班次设置、本地缓存都会清空）')) return;
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+      }
+    } catch (e) { /* ignore */ }
+    try { localStorage.clear(); } catch (e) { /* ignore */ }
+    toast('已彻底清除，正在重新加载…');
+    setTimeout(() => location.reload(true), 500);
   });
   $('#btnBackup').addEventListener('click', () => {
     download('shift-backup-' + ymd(new Date()) + '.json',
@@ -649,14 +842,25 @@
   });
 
   /**
-   * 移动端优先走系统分享面板（可直接选「日历」导入），
-   * 不支持时退回下载，再不行就展示文本让用户自行保存。
+   * 导出 ICS：
+   * - iOS/iPadOS：直接打开 blob URL（不走 Web Share），系统会自动用日历导入；
+   * - Android/其他：优先 Web Share Level 2 分享文件到日历；
+   * - 不支持分享时退回下载；再不行展示文本兜底。
    */
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   function exportIcs(r) {
     const fileName = '我的排班闹钟.ics';
     const type = 'text/calendar';
 
-    // 1) Web Share Level 2：手机上体验最好
+    // iOS：Web Share 对 .ics 识别差，分享面板不会出「日历」，直接打开更稳
+    if (isIOS) {
+      openIcsOnIOS(r, fileName, type);
+      return;
+    }
+
+    // Android/其他：优先 Web Share Level 2
     try {
       if (navigator.canShare && window.File) {
         const file = new File([r.text], fileName, { type: type });
@@ -675,6 +879,25 @@
     tryDownload(r, fileName, type);
   }
 
+  function openIcsOnIOS(r, fileName, type) {
+    // iOS 上「模拟点击 blob 链接」不会触发系统日历。
+    // 最可靠的方式：新开一个标签，把内容按 text/calendar 写入，
+    // iOS Safari 会自动弹出「在日历中打开」提示。
+    try {
+      const w = window.open('', '_blank');
+      if (w && w.document) {
+        w.document.open('text/calendar');
+        w.document.write(r.text);
+        w.document.close();
+        toast('请选择「日历」导入 ' + r.count + ' 天排班');
+        return;
+      }
+    } catch (e) { /* 弹窗被拦截，走兜底 */ }
+
+    // 弹窗被拦截（如 PWA 限制）：给一个真实可点击的链接，用户点它才能唤起系统日历
+    showIcsFallback(r);
+  }
+
   function tryDownload(r, fileName, type) {
     try {
       const a = document.createElement('a');
@@ -690,10 +913,22 @@
     }
   }
 
-  /** 兜底：把内容摊开让用户复制 */
+  /** 兜底：给一个真实可点击的「在日历中打开」链接 + 复制全文 */
   function showIcsFallback(r) {
     $('#icsText').value = r.text;
     $('#icsCount').textContent = r.count + ' 天';
+    const blob = new Blob([r.text], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    let a = document.getElementById('icsOpen');
+    if (!a) {
+      a = document.createElement('a');
+      a.id = 'icsOpen';
+      a.className = 'btn-full grad';
+      a.textContent = '在日历中打开（点此）';
+      a.style.marginBottom = '12px';
+      $('#icsText').parentNode.insertBefore(a, $('#icsText'));
+    }
+    a.href = url;
     openSheet('#sheetIcs');
   }
 
@@ -809,13 +1044,17 @@
     const n = new Date();
     viewYear = n.getFullYear();
     viewMonth = n.getMonth();
+    loadWeatherCache();
     renderAll();
     checkPerm();
+    fetchWeather();   // 后台刷新天气
 
     setInterval(() => { renderHero(); }, 30000);
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) { renderAll(); checkPerm(); }
+      if (document.hidden) { notifyOnExit(); }
+      else { exitNotified = false; renderAll(); checkPerm(); }
     });
+    window.addEventListener('pagehide', () => { notifyOnExit(); });
     // 解锁音频（iOS 需用户手势）
     document.addEventListener('touchstart', function unlock() {
       try {
@@ -829,7 +1068,21 @@
     if ('serviceWorker' in navigator &&
         location.protocol !== 'file:' &&
         !window.__SINGLE_FILE__) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.register('sw.js', { scope: './' })
+        .then((reg) => {
+          // 若已有新版在等待，立即激活
+          if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          // 下次检测到新版本时，安装完自动跳过等待，立即接管
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            if (nw) nw.addEventListener('statechange', () => {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                nw.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          });
+        })
+        .catch(() => {});
     }
   }
   init();

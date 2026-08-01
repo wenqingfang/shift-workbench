@@ -56,10 +56,34 @@
   <div class="notice glass" id="permNotice" hidden>
     <div class="notice-txt">
       <strong>开启通知</strong>
-      <p>允许后，App 在后台也能到点提醒你。</p>
+      <p>允许后，退出 App 也会弹出今日提醒（锁屏可见）。</p>
     </div>
     <button class="btn-sm grad" id="btnPerm">开启</button>
   </div>
+
+  <!-- ===== 今日贴心提醒 ===== -->
+  <section class="card glass" id="todayCard">
+    <div class="card-head">
+      <h2>今日贴心提醒</h2>
+      <button class="icon-btn-sm" id="btnWeatherRefresh" aria-label="刷新天气">↻</button>
+    </div>
+    <div class="weather-row">
+      <span class="w-ico" id="wIco">🌤️</span>
+      <div class="w-main">
+        <div class="w-city" id="wCity">点刷新获取天气</div>
+        <div class="w-temp" id="wTemp">--°</div>
+      </div>
+      <div class="w-meta">
+        <span id="wCond">--</span>
+        <span id="wHiLo">--/--</span>
+      </div>
+    </div>
+    <div class="tips">
+      <div class="tip" id="tipShift">💼 今天未排班</div>
+      <div class="tip" id="tipWeather">🌤 天气加载中…</div>
+      <div class="tip" id="tipHoliday">🎉 今天无特殊节假日</div>
+    </div>
+  </section>
 
   <!-- ===== 日历 ===== -->
   <section class="card glass">
@@ -146,6 +170,15 @@
     </div>
 
     <div class="field">
+      <label>天气城市</label>
+      <div class="lead-row">
+        <input type="text" id="cityInput" placeholder="如 上海 / 北京 / 杭州" maxlength="12">
+        <button class="btn-sm grad" id="citySave">保存</button>
+      </div>
+      <p class="hint">留空则自动用定位；填城市名可固定地点（用于今日天气与提醒）。</p>
+    </div>
+
+    <div class="field">
       <label>班次设置</label>
       <div class="shift-editor" id="shiftEditor"></div>
       <button class="btn-line" id="btnAddShift">+ 新增班次</button>
@@ -157,6 +190,7 @@
         <button class="btn-line" id="btnBackup">导出备份</button>
         <button class="btn-line" id="btnRestore">导入备份</button>
         <button class="btn-line danger" id="btnClear">清空排班</button>
+        <button class="btn-line danger" id="btnWipe">彻底清除缓存（重置）</button>
       </div>
     </div>
 
