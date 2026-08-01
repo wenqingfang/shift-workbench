@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>打开班次闹钟</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,system-ui,sans-serif;background:linear-gradient(160deg,#1a1030,#241640);
+       color:#eee;min-height:100vh;margin:0;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;padding:24px;text-align:center}
+  h1{font-size:22px;margin:0 0 8px}
+  p{opacity:.8;line-height:1.6;margin:6px 0}
+  .btn{display:inline-block;margin-top:18px;padding:14px 22px;border-radius:14px;
+       background:rgba(155,140,255,.18);border:1px solid rgba(155,140,255,.5);
+       color:#cdbcff;text-decoration:none;font-size:16px}
+  .spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.2);
+        border-top-color:#9b8cff;border-radius:50%;animation:sp 1s linear infinite;margin:14px auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+  <h1>班次闹钟 · 启动器</h1>
+  <div class="spin"></div>
+  <p id="msg">正在清理旧缓存，避免「丢失网络连接」…</p>
+  <p><a class="btn" id="go" href="https://cdn.jsdelivr.net/gh/wenqingfang/shift-workbench@main/index.html">仍打不开？点此直达（jsDelivr）</a></p>
+  <script>
+  (function(){
+    var target = 'https://cdn.jsdelivr.net/gh/wenqingfang/shift-workbench@main/index.html';
+    function go(){ location.replace(target); }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs){
+        return Promise.all(regs.map(function(r){ return r.unregister(); }));
+      }).then(function(){
+        document.getElementById('msg').textContent = '已清理，正在打开…';
+        setTimeout(go, 500);
+      }).catch(function(){ go(); });
+    } else { go(); }
+    // 兜底：3 秒后若还停在本页，强制跳转
+    setTimeout(function(){ if (location.pathname.indexOf('launcher') >= 0) go(); }, 3000);
+  })();
+  </script>
+</body>
+</html>
