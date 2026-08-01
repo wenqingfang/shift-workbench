@@ -880,21 +880,59 @@
   }
 
   function openIcsOnIOS(r, fileName, type) {
-    // iOS 上「模拟点击 blob 链接」不会触发系统日历。
-    // 最可靠的方式：新开一个标签，把内容按 text/calendar 写入，
-    // iOS Safari 会自动弹出「在日历中打开」提示。
+    // iOS 对 .ics 的导入非常挑剔：
+    // 1. blob URL + a.click 不会唤起日历；
+    // 2. window.open + document.write('text/calendar') 在某些版本会直接把源码当文本显示；
+    // 3. data URI 跳转相对最稳，能触发系统日历弹窗。
+    const isStandalone = window.navigator.standalone === true;
+
+    // 方案 A：Web Share 文件（iOS 13+ 支持分享文件到日历，且不覆盖当前页）
     try {
-      const w = window.open('', '_blank');
-      if (w && w.document) {
-        w.document.open('text/calendar');
-        w.document.write(r.text);
-        w.document.close();
+      if (navigator.canShare && window.File) {
+        const file = new File([r.text], fileName, { type: type });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: '我的排班闹钟' })
+            .then(() => toast('已分享 ' + r.count + ' 天 · 请选择「日历」导入'))
+            .catch((err) => {
+              if (err && err.name === 'AbortError') return;
+              openIcsDataURI(r, type);
+            });
+          return;
+        }
+      }
+    } catch (e) { /* 继续降级 */ }
+
+    // 方案 B：data URI 跳转（兼容旧 iOS / PWA）
+    openIcsDataURI(r, type);
+  }
+
+  function openIcsDataURI(r, type) {
+    try {
+      const b64 = btoa(unescape(encodeURIComponent(r.text)));
+      const uri = 'data:' + type + ';base64,' + b64;
+
+      // PWA 模式下 window.open 行为异常，容易覆盖当前页；
+      // 用 iframe 加载 data URI 可保留当前页，同时让系统识别为日历文件。
+      if (window.navigator.standalone === true) {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = uri;
+        document.body.appendChild(iframe);
+        setTimeout(() => iframe.remove(), 3000);
         toast('请选择「日历」导入 ' + r.count + ' 天排班');
         return;
       }
-    } catch (e) { /* 弹窗被拦截，走兜底 */ }
 
-    // 弹窗被拦截（如 PWA 限制）：给一个真实可点击的链接，用户点它才能唤起系统日历
+      // Safari 普通标签页：data URI 跳转可触发日历
+      const a = document.createElement('a');
+      a.href = uri;
+      a.target = '_blank';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => a.remove(), 500);
+      toast('请选择「日历」导入 ' + r.count + ' 天排班');
+      return;
+    } catch (e) { /* 走兜底 */ }
+
     showIcsFallback(r);
   }
 
