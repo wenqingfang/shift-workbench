@@ -131,6 +131,10 @@
         <span class="a-icon grad-ico">🔔</span>
         <span class="a-txt"><strong>测试闹钟</strong><small>试听提醒效果</small></span>
       </button>
+      <button class="action glass" id="btnClock">
+        <span class="a-icon grad-ico">⏰</span>
+        <span class="a-txt"><strong>设置 iPhone 系统闹钟</strong><small>最可靠 · 可自定义铃声持续响</small></span>
+      </button>
     </section>
 
     <footer class="foot">
@@ -326,6 +330,24 @@
   </div>
 </div>
 
+<!-- ===== 抽屉：iPhone 系统闹钟清单 ===== -->
+<div class="sheet glass tall" id="sheetClock">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <h3>设置 iPhone 系统闹钟</h3>
+    <button class="ghost-btn" id="clockClose">关闭</button>
+  </div>
+  <div class="sheet-body">
+    <p class="hint" style="margin-bottom:10px">网页闹钟在锁屏 / 退出后会被 iPhone 暂停，所以<strong>真正一直响、还能自定义铃声</strong>的是 iPhone 自带「时钟」App 的闹钟（系统级）。下面已按你的排班列好所有闹钟时间，逐个加进去最稳。</p>
+    <div class="btn-row" style="margin-bottom:12px">
+      <button class="btn-full grad" id="btnCopyClock" style="flex:1">📋 复制闹钟清单</button>
+      <button class="btn-full" id="btnOpenClock" style="flex:1">⏰ 打开时钟 App</button>
+    </div>
+    <div class="clock-list" id="clockList"></div>
+    <p class="hint" style="margin-top:12px">提示：在「时钟」里把铃声设成你爱听的，并关掉「稍后提醒」，基本不会睡过头。改了排班就重新点这里更新清单。</p>
+  </div>
+</div>
+
 <!-- ===== 闹钟弹层 ===== -->
 <div class="alarm-overlay" id="alarmOverlay">
   <div class="alarm-box glass">
@@ -333,7 +355,7 @@
     <h2 id="alarmTitle">该准备上班了</h2>
     <p id="alarmSub">14:00 下午班</p>
     <div class="alarm-time" id="alarmNow">13:00</div>
-    <button class="btn-full grad" id="btnStopAlarm">我知道了</button>
+    <button class="btn-full grad" id="btnStopAlarm">我醒了，停止响铃</button>
   </div>
 </div>
 

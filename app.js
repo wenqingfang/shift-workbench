@@ -1008,10 +1008,22 @@
   }
 
   /* ================= 闹钟 ================= */
-  function beep() {
+  /* ================= 闹钟（前台持续响铃，直到手动停止） ================= */
+  let ringing = false;
+  let ringLoopTimer = null;
+  let wakeLock = null;
+
+  function ensureAudio() {
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { /* ignore */ }
+  }
+
+  /** 短试听音（设置页切换铃声用） */
+  function beep() {
+    ensureAudio();
+    try {
       const t0 = audioCtx.currentTime;
       const tone = S.ringTone || 'default';
       const presets = {
@@ -1037,16 +1049,91 @@
     } catch (e) { /* ignore */ }
   }
 
+  /** 持续响铃：循环警笛 + 振动 + 保持屏幕常亮，直到手动停止。仅在前台有效。 */
+  function startRinging() {
+    if (ringing) return;
+    ringing = true;
+    ensureAudio();
+    const ctx = audioCtx;
+    const preset = S.ringTone || 'default';
+
+    const playCycle = () => {
+      if (!ringing) return;
+      ensureAudio();   // 若被系统暂停，每次循环尝试恢复
+      try {
+        const now = ctx.currentTime;
+        if (preset === 'lull') {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sawtooth'; o.frequency.value = 300;
+          o.connect(g); g.connect(ctx.destination);
+          g.gain.setValueAtTime(0.0001, now);
+          g.gain.exponentialRampToValueAtTime(0.35, now + 0.05);
+          g.gain.setValueAtTime(0.35, now + 1.15);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + 1.35);
+          o.start(now); o.stop(now + 1.4);
+        } else if (preset === 'triple') {
+          [660, 880, 1046].forEach((f, i) => {
+            const o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = 'square'; o.frequency.value = f;
+            o.connect(g); g.connect(ctx.destination);
+            const st = now + i * 0.18;
+            g.gain.setValueAtTime(0.0001, st);
+            g.gain.exponentialRampToValueAtTime(0.33, st + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, st + 0.16);
+            o.start(st); o.stop(st + 0.18);
+          });
+        } else {
+          const base = preset === 'urgent' ? 1000 : 740;
+          const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain();
+          o1.type = 'square'; o2.type = 'square';
+          o1.connect(g); o2.connect(g); g.connect(ctx.destination);
+          g.gain.setValueAtTime(0.0001, now);
+          const peak = preset === 'urgent' ? 0.42 : 0.36;
+          g.gain.exponentialRampToValueAtTime(peak, now + 0.04);
+          o1.frequency.setValueAtTime(base, now);
+          o1.frequency.linearRampToValueAtTime(base * 1.6, now + 0.45);
+          o1.frequency.linearRampToValueAtTime(base, now + 0.9);
+          o2.frequency.setValueAtTime(base * 1.5, now);
+          o2.frequency.linearRampToValueAtTime(base * 2.2, now + 0.45);
+          o2.frequency.linearRampToValueAtTime(base * 1.5, now + 0.9);
+          g.gain.setValueAtTime(peak, now + 0.85);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + 0.95);
+          o1.start(now); o2.start(now); o1.stop(now + 1.0); o2.stop(now + 1.0);
+        }
+      } catch (e) { /* ignore */ }
+      if (navigator.vibrate) {
+        try { navigator.vibrate(preset === 'urgent' ? [220, 60, 220, 60, 220] : [420, 120, 420, 120, 420]); } catch (e) {}
+      }
+    };
+
+    playCycle();
+    ringLoopTimer = setInterval(playCycle, preset === 'urgent' ? 850 : 1000);
+    requestWakeLock();
+    document.body.classList.add('alarm-ringing');
+  }
+
+  function stopRinging() {
+    ringing = false;
+    clearInterval(ringLoopTimer);
+    ringLoopTimer = null;
+    try { if (audioCtx) audioCtx.suspend(); } catch (e) {}
+    document.body.classList.remove('alarm-ringing');
+    releaseWakeLock();
+  }
+
+  async function requestWakeLock() {
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { /* ignore */ }
+  }
+  function releaseWakeLock() {
+    try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
+  }
+
   function fireAlarm(item) {
-    $('#alarmTitle').textContent = '该准备上班了';
-    $('#alarmSub').textContent = item.shift.start + ' ' + item.shift.name + ' · 还有 ' + S.leadMinutes + ' 分钟';
+    $('#alarmTitle').textContent = '⏰ 该准备上班了';
+    $('#alarmSub').textContent = item.shift.start + ' ' + item.shift.name + ' · 提前 ' + S.leadMinutes + ' 分钟';
     $('#alarmNow').textContent = hhmm(new Date());
     $('#alarmOverlay').classList.add('on');
-    beep();
-    clearInterval(ringTimer);
-    let n = 0;
-    ringTimer = setInterval(() => { beep(); if (++n > 20) clearInterval(ringTimer); }, 1800);
-    if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 600]);
+    startRinging();
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
         new Notification('该准备上班了 🔔', {
@@ -1058,11 +1145,67 @@
   }
   $('#btnStopAlarm').addEventListener('click', () => {
     $('#alarmOverlay').classList.remove('on');
-    clearInterval(ringTimer);
+    stopRinging();
   });
   $('#btnTest').addEventListener('click', () => {
     const sh = S.shifts.find((s) => s.start) || { name: '示例班次', start: '14:00' };
     fireAlarm({ key: 'test', shift: sh });
+  });
+
+  /* ================= iPhone 系统闹钟清单 ================= */
+  function clockAlarmItems() {
+    return upcomingAlarms(30).map((it) => {
+      const wk = ['日', '一', '二', '三', '四', '五', '六'][it.date.getDay()];
+      const dLabel = (it.date.getMonth() + 1) + '月' + it.date.getDate() + '日 周' + wk;
+      return { dLabel: dLabel, name: it.shift.name, start: it.shift.start, alarm: hhmm(it.time) };
+    });
+  }
+  function buildClockListText() {
+    const items = clockAlarmItems();
+    if (!items.length) return null;
+    const lines = ['建议把下面每个时间加到 iPhone 自带「时钟」App（可自定义铃声、锁屏持续响）：', ''];
+    items.forEach((it, i) => lines.push((i + 1) + '. ' + it.dLabel + ' · ' + it.name + ' ' + it.start + ' 上班 → 闹钟 ' + it.alarm));
+    return { text: lines.join('\n'), count: items.length };
+  }
+  function renderClockList() {
+    const items = clockAlarmItems();
+    const box = $('#clockList');
+    if (!items.length) { box.innerHTML = '<p class="empty-txt">还没有安排闹钟<br>先去日历排好班</p>'; return; }
+    box.innerHTML = '';
+    items.forEach((it) => {
+      const el = document.createElement('div');
+      el.className = 'cl';
+      el.innerHTML = '<span class="cl-bar"></span>' +
+        '<span class="cl-main"><span class="cl-d">' + it.dLabel + '</span>' +
+        '<span class="cl-s">' + esc(it.name) + ' ' + it.start + ' 上班</span></span>' +
+        '<span class="cl-t"><b>' + it.alarm + '</b><small>设闹钟</small></span>';
+      box.appendChild(el);
+    });
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; ta.style.top = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+    toast(ok ? '已复制闹钟清单' : '请手动长按复制');
+  }
+  $('#btnClock').addEventListener('click', () => { renderClockList(); openSheet('#sheetClock'); });
+  $('#clockClose').addEventListener('click', closeSheets);
+  $('#btnCopyClock').addEventListener('click', () => {
+    const r = buildClockListText();
+    if (!r) { toast('还没有可复制的闹钟'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(r.text).then(() => toast('已复制 ' + r.count + ' 个闹钟时间')).catch(() => fallbackCopy(r.text));
+    } else fallbackCopy(r.text);
+  });
+  $('#btnOpenClock').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = 'clock://'; a.style.display = 'none';
+    document.body.appendChild(a);
+    try { a.click(); } catch (e) {}
+    setTimeout(() => a.remove(), 600);
+    toast('已尝试打开「时钟」App，没反应就手动打开并逐个加');
   });
 
   function scheduleNextAlarm() {
