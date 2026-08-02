@@ -152,6 +152,27 @@
         </div>
 
         <div class="field">
+          <label>到点前多次提醒</label>
+          <div class="lead-row">
+            <span class="hint-inline">日历在点班前响多次（如 60/30/15/5 分钟），更不易睡过头</span>
+            <label class="switch"><input type="checkbox" id="multiAlarm"><span class="slider"></span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>网页闹钟铃声（前台时）</label>
+          <div class="lead-row">
+            <select id="ringTone" class="sel">
+              <option value="default">双音（默认）</option>
+              <option value="urgent">急促蜂鸣</option>
+              <option value="triple">三连升调</option>
+              <option value="lull">低沉长鸣</option>
+            </select>
+          </div>
+          <p class="hint">仅在本工作台页面前台打开时生效；睡眠锁屏请用 iPhone 自带「时钟」App 闹钟，才能持续响铃。</p>
+        </div>
+
+        <div class="field">
           <label>天气城市</label>
           <div class="lead-row">
             <input type="text" id="cityInput" placeholder="如 上海 / 北京 / 杭州" maxlength="12">
@@ -278,6 +299,7 @@
     <button class="ghost-btn" id="icsClose">关闭</button>
   </div>
   <div class="sheet-body">
+    <p class="hint" style="margin-bottom:12px">日历提醒每次只响一下（iOS 限制）。已开启「多次提醒」时会在到点前多次响铃；若仍怕睡过头，请在 iPhone 自带「时钟」App 另设一个同时间的闹钟（可自定义铃声、持续响）。</p>
     <div class="export-menu" id="exportMenu">
       <button class="btn-full grad" id="btnShareIcs">
         <span class="btn-icon">📤</span>用系统分享发送 .ics

@@ -519,6 +519,8 @@
     $('#leadVal').textContent = S.leadMinutes + ' 分钟';
     $('#leadExample').textContent = minusLead('14:00');
     $('#helpLead').textContent = S.leadMinutes;
+    $('#multiAlarm').checked = S.multiAlarm !== false;
+    $('#ringTone').value = S.ringTone || 'default';
 
     const box = $('#shiftEditor');
     box.innerHTML = '';
@@ -566,6 +568,15 @@
     $('#leadExample').textContent = minusLead('14:00');
     $('#helpLead').textContent = S.leadMinutes;
     save(); renderHero(); renderAlarmList();
+  });
+  $('#multiAlarm').addEventListener('change', (e) => {
+    S.multiAlarm = e.target.checked; save();
+    toast('已' + (e.target.checked ? '开启' : '关闭') + '「到点前多次提醒」');
+  });
+  $('#ringTone').addEventListener('change', (e) => {
+    S.ringTone = e.target.value; save();
+    beep(); // 立即试听
+    toast('已切换铃声，可点「测试闹钟」试听');
   });
   $('#btnAddShift').addEventListener('click', () => {
     const colors = ['#34d399', '#fb7185', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'];
@@ -836,11 +847,19 @@
       L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班'));
       L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
       if (sh.alarm) {
-        L.push('BEGIN:VALARM');
-        L.push('ACTION:DISPLAY');
-        L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
-        L.push('TRIGGER:-PT' + S.leadMinutes + 'M');
-        L.push('END:VALARM');
+        // 多重阶梯提醒：主提醒 + 到点前更临近的几次，避免只响一次睡过头
+        const leads = [S.leadMinutes];
+        if (S.multiAlarm !== false) {
+          [30, 15, 5].forEach((m) => { if (m < S.leadMinutes && leads.indexOf(m) < 0) leads.push(m); });
+        }
+        leads.sort((a, b) => b - a); // 由早到晚
+        leads.forEach((m) => {
+          L.push('BEGIN:VALARM');
+          L.push('ACTION:DISPLAY');
+          L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
+          L.push('TRIGGER:-PT' + m + 'M');
+          L.push('END:VALARM');
+        });
       }
       L.push('END:VEVENT');
     });
@@ -994,17 +1013,26 @@
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const t0 = audioCtx.currentTime;
-      [0, 0.28, 0.56].forEach((off) => {
+      const tone = S.ringTone || 'default';
+      const presets = {
+        default: [880, 1170],
+        urgent: [1046, 1318, 1568],
+        triple: [660, 880, 1046],
+        lull: [392, 392]
+      };
+      const notes = presets[tone] || presets.default;
+      const step = (tone === 'urgent') ? 0.14 : 0.26;
+      notes.forEach((f, i) => {
+        const off = i * step;
         const o = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         o.type = 'sine';
-        o.frequency.setValueAtTime(880, t0 + off);
-        o.frequency.setValueAtTime(1170, t0 + off + 0.12);
+        o.frequency.setValueAtTime(f, t0 + off);
         g.gain.setValueAtTime(0.0001, t0 + off);
         g.gain.exponentialRampToValueAtTime(0.32, t0 + off + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.24);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + step * 0.9);
         o.connect(g); g.connect(audioCtx.destination);
-        o.start(t0 + off); o.stop(t0 + off + 0.26);
+        o.start(t0 + off); o.stop(t0 + off + step);
       });
     } catch (e) { /* ignore */ }
   }
