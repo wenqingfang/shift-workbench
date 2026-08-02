@@ -196,6 +196,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 .btn-row{display:flex;gap:8px}
 .btn-full{width:100%;padding:14px;border-radius:var(--r-md);font-size:15px;font-weight:650}
 .btn-full:active{transform:scale(.98)}
+.btn-full small{display:block;margin-top:3px;font-size:11px;font-weight:500;color:var(--txt-dim);opacity:.85}
+.btn-icon{display:inline-block;margin-right:8px;font-size:18px;vertical-align:-2px}
+.export-menu{display:flex;flex-direction:column;gap:12px}
+.export-menu .btn-full{text-align:left;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);transition:.15s}
+.export-menu .btn-full:first-child{background:var(--grad);border:none;box-shadow:0 8px 22px rgba(124,92,255,.35)}
+.export-menu .btn-full:active{background:rgba(255,255,255,.14)}
+.export-menu .btn-full:first-child:active{opacity:.92}
+.copy-area{display:flex;flex-direction:column;gap:12px}
+.copy-area textarea{margin-top:4px}
 .help{font-size:12px;color:var(--txt-dim);line-height:1.75;display:flex;flex-direction:column;gap:10px;
   padding:12px;border-radius:var(--r-sm);background:rgba(255,255,255,.045)}
 .help b{color:var(--txt)}

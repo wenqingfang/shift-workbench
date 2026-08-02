@@ -270,17 +270,37 @@
   </div>
 </div>
 
-<!-- ===== 抽屉：ICS 兜底 ===== -->
+<!-- ===== 抽屉：ICS 导出菜单 ===== -->
 <div class="sheet glass tall" id="sheetIcs">
   <div class="sheet-handle"></div>
   <div class="sheet-head">
-    <h3>日历内容 <span class="pill" id="icsCount">0 天</span></h3>
+    <h3>导出到手机日历 <span class="pill" id="icsCount">0 天</span></h3>
     <button class="ghost-btn" id="icsClose">关闭</button>
   </div>
   <div class="sheet-body">
-    <p class="hint">当前环境不能直接保存文件。复制下面全部内容，用「备忘录 / 文本编辑器」新建一个文件、命名为 <b>排班.ics</b>，再用日历 App 打开它即可。</p>
-    <textarea id="icsText" rows="10" readonly></textarea>
-    <button class="btn-full grad" id="btnCopyIcs">复制全部内容</button>
+    <div class="export-menu" id="exportMenu">
+      <button class="btn-full grad" id="btnShareIcs">
+        <span class="btn-icon">📤</span>用系统分享发送 .ics
+        <small>推荐：iOS 可能直接显示「日历」</small>
+      </button>
+      <button class="btn-full" id="btnOpenIcs">
+        <span class="btn-icon">📅</span>在日历 App 中打开
+        <small>Safari 会询问是否导入</small>
+      </button>
+      <button class="btn-full" id="btnSaveIcs">
+        <span class="btn-icon">💾</span>保存到「文件」App
+        <small>保存后在文件 App 中点击 .ics 导入</small>
+      </button>
+      <button class="btn-full" id="btnCopyIcs">
+        <span class="btn-icon">📋</span>复制全部内容
+        <small>粘贴到备忘录，再另存为 .ics</small>
+      </button>
+    </div>
+    <div class="copy-area" id="copyArea" hidden>
+      <p class="hint">已复制到剪贴板。在备忘录中新建文件并粘贴，保存为 <b>排班.ics</b>，再用日历 App 打开即可。</p>
+      <textarea id="icsText" rows="8" readonly></textarea>
+      <button class="btn-full" id="btnBackToMenu">返回导出菜单</button>
+    </div>
   </div>
 </div>
 
