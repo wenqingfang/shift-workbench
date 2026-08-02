@@ -486,6 +486,19 @@
     scheduleNextAlarm();
   }
 
+  /* ================= 底部导航：视图切换 ================= */
+  let curView = 'home';
+  function switchView(name) {
+    curView = name;
+    $$('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
+    $$('.nav-tab').forEach((t) => t.classList.toggle('on', t.dataset.view === name));
+    if (name === 'settings') renderSettings();
+    if (name === 'schedule') { renderCalendar(); renderAlarmList(); renderPaint(); }
+    if (name === 'home') { renderHero(); renderCountdown(); }
+    window.scrollTo(0, 0);
+  }
+  $$('.nav-tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
+
   /* ================= 抽屉控制 ================= */
   function openSheet(sel) {
     $('#mask').classList.add('on');
@@ -497,7 +510,6 @@
   }
   $('#mask').addEventListener('click', closeSheets);
   $('#sheetClose').addEventListener('click', closeSheets);
-  $('#setClose').addEventListener('click', () => { closeSheets(); renderAll(); });
   $('#impClose').addEventListener('click', closeSheets);
 
   /* ================= 设置 ================= */
@@ -540,7 +552,7 @@
     });
   }
 
-  $('#btnSettings').addEventListener('click', () => { renderSettings(); openSheet('#sheetSettings'); });
+  $('#btnSettings').addEventListener('click', () => switchView('settings'));
   $('#btnWeatherRefresh').addEventListener('click', () => { fetchWeather(); toast('正在获取天气…'); });
   $('#citySave').addEventListener('click', () => {
     const v = $('#cityInput').value.trim();
@@ -1053,6 +1065,7 @@
     viewMonth = n.getMonth();
     loadWeatherCache();
     renderAll();
+    switchView('home');
     checkPerm();
     fetchWeather();   // 后台刷新天气
 
