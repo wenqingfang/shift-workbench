@@ -1272,7 +1272,7 @@
       const d = pad(a.getDate());
       const hh = pad(a.getHours());
       const mm = pad(a.getMinutes());
-      const datetime = y + '-' + m + '-' + d + ' ' + hh + ':' + mm; // Shortcuts 可直接解析为日期
+      const datetime = y + '-' + m + '-' + d + 'T' + hh + ':' + mm + ':00'; // ISO 8601，Shortcuts「日期」动作可直接解析为本地时间
       const title = sh.name + ' ' + sh.start + ' 上班 · 准备';
       const note = '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成';
       lines.push([datetime, title, note].join('\t'));
@@ -1320,7 +1320,7 @@
     const text = buildRemindersList();
     if (!text) { toast('还没有可生成的提醒事项'); return; }
     const doOpen = () => {
-      const url = 'shortcuts://run-shortcut?name=' + encodeURIComponent(BATCH_SHORTCUT_NAME) + '&input=clipboard';
+      const url = 'shortcuts://run-shortcut?name=' + encodeURIComponent(BATCH_SHORTCUT_NAME);
       const a = document.createElement('a');
       a.href = url; a.style.display = 'none';
       document.body.appendChild(a);

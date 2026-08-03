@@ -708,20 +708,20 @@ window.__SINGLE_FILE__ = true;
 
     <details class="hint-box" open style="margin-bottom:12px">
       <summary style="cursor:pointer;font-weight:600">⚡ 首次设置：在 iPhone 搭一个「批量添加排班提醒」捷径（只需一次）</summary>
+      <p style="margin:8px 0 4px 2px;font-size:12.5px;opacity:.85">iOS 26 把动作菜单位置改了，<strong>不用在菜单里翻，直接在每个动作的搜索框里打下面括号里的关键词</strong>就能找到。本捷径不依赖"接收输入"，用「获取剪贴板」直接读清单，少踩坑。</p>
       <ol style="margin:8px 0 0 18px;line-height:1.7;font-size:13px">
         <li>打开 iPhone「快捷指令」App → 点右上角 <strong>+</strong> 新建快捷指令。</li>
-        <li>点顶部 <strong>…</strong>（或滑动到最上）→ 打开「接收」开关，确保捷径能<strong>接收任何输入</strong>。</li>
-        <li>添加动作：<strong>拆分文本</strong> → 输入选 <strong>捷径输入</strong>，方式选 <strong>新行</strong>。</li>
-        <li>添加动作：<strong>针对每一项重复</strong>。</li>
-        <li>在循环内部添加：<strong>拆分文本</strong> → 输入选 <strong>重复项目</strong>，方式选 <strong>制表符</strong>。</li>
-        <li>添加：<strong>从列表中获取项目</strong> → 索引 <strong>1</strong>，点住设为变量 <code>日期时间</code>。</li>
-        <li>添加：<strong>从列表中获取项目</strong> → 索引 <strong>2</strong>，点住设为变量 <code>标题</code>。</li>
-        <li>添加：<strong>从列表中获取项目</strong> → 索引 <strong>3</strong>，点住设为变量 <code>备注</code>。</li>
-        <li>添加：<strong>日期</strong>（或「从输入获取日期」）→ 输入选变量 <code>日期时间</code>，输出设为变量 <code>提醒日期</code>。</li>
-        <li>添加：<strong>添加提醒事项</strong> → 标题选变量 <code>标题</code>，备注选变量 <code>备注</code>，打开「提醒」开关，到期日选变量 <code>提醒日期</code>。</li>
+        <li>搜索框搜 <strong>「剪贴板」</strong> → 添加动作 <strong>获取剪贴板</strong>。（这一步把清单读进来）</li>
+        <li>搜索框搜 <strong>「拆分」</strong> → 添加 <strong>拆分文本</strong>：点它的「文本」输入框选上一步的<strong>剪贴板</strong>；「分隔符」选 <strong>新行</strong>。</li>
+        <li>搜索框搜 <strong>「重复」</strong> → 添加 <strong>针对每一项重复</strong>：输入选上一步的<strong>拆分结果</strong>。</li>
+        <li>在循环里，搜索框搜 <strong>「拆分」</strong> → 加 <strong>拆分文本</strong>：文本选魔法变量 <strong>重复项目</strong>；分隔符选 <strong>制表符</strong>（Tab）。</li>
+        <li>搜索框搜 <strong>「项目」</strong> → 加 <strong>从列表中获取项目</strong>：输入选上一步；「索引」填 <strong>1</strong> → 长按结果设为变量 <code>日期时间</code>。</li>
+        <li>同样再加两次 <strong>从列表中获取项目</strong>：索引 <strong>2</strong> → 变量 <code>标题</code>；索引 <strong>3</strong> → 变量 <code>备注</code>。</li>
+        <li>搜索框搜 <strong>「日期」</strong> → 加 <strong>日期</strong>：点它的日期框，选魔法变量 <code>日期时间</code>（把文本转成真正日期）→ 长按结果设为变量 <code>提醒日期</code>。</li>
+        <li>搜索框搜 <strong>「提醒事项」</strong> → 加 <strong>添加提醒事项</strong>：标题选 <code>标题</code>，备注选 <code>备注</code>，打开 <strong>提醒</strong> 开关，到期日选 <code>提醒日期</code>。</li>
         <li>点右上角「完成」，把快捷指令命名为 <strong>批量添加排班提醒</strong>（必须这个名字，网页才能一键唤起）。</li>
       </ol>
-      <p style="margin:8px 0 0 18px;font-size:12px;opacity:.8">设置好后，每次排班更新，点上面的「⚡ 一键运行…」按钮即可：网页把全部排班复制到剪贴板，并自动跳转到快捷指令，你点运行就全部加进「提醒事项」，日期时间都是你设置的。</p>
+      <p style="margin:8px 0 0 18px;font-size:12px;opacity:.8">设置好后，每次排班更新，点上面的「⚡ 一键运行…」按钮：网页把全部排班复制到剪贴板并跳到快捷指令，你点运行就全部加进「提醒事项」，日期时间都是你设置的。若一键跳转不便，也可手动打开「快捷指令」App 点这个捷径运行（剪贴板已有数据）。</p>
     </details>
 
     <div class="btn-row" style="margin-bottom:12px">
@@ -2021,7 +2021,7 @@ window.__SINGLE_FILE__ = true;
       const d = pad(a.getDate());
       const hh = pad(a.getHours());
       const mm = pad(a.getMinutes());
-      const datetime = y + '-' + m + '-' + d + ' ' + hh + ':' + mm; // Shortcuts 可直接解析为日期
+      const datetime = y + '-' + m + '-' + d + 'T' + hh + ':' + mm + ':00'; // ISO 8601，Shortcuts「日期」动作可直接解析为本地时间
       const title = sh.name + ' ' + sh.start + ' 上班 · 准备';
       const note = '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成';
       lines.push([datetime, title, note].join('\t'));
@@ -2069,7 +2069,7 @@ window.__SINGLE_FILE__ = true;
     const text = buildRemindersList();
     if (!text) { toast('还没有可生成的提醒事项'); return; }
     const doOpen = () => {
-      const url = 'shortcuts://run-shortcut?name=' + encodeURIComponent(BATCH_SHORTCUT_NAME) + '&input=clipboard';
+      const url = 'shortcuts://run-shortcut?name=' + encodeURIComponent(BATCH_SHORTCUT_NAME);
       const a = document.createElement('a');
       a.href = url; a.style.display = 'none';
       document.body.appendChild(a);
