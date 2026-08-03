@@ -715,13 +715,17 @@ window.__SINGLE_FILE__ = true;
         <li>搜索框搜 <strong>「拆分」</strong> → 添加 <strong>拆分文本</strong>：点它的「文本」输入框选上一步的<strong>剪贴板</strong>；「分隔符」选 <strong>新行</strong>。</li>
         <li>搜索框搜 <strong>「重复」</strong> → 添加 <strong>针对每一项重复</strong>：输入选上一步的<strong>拆分结果</strong>。</li>
         <li>在循环里，搜索框搜 <strong>「拆分」</strong> → 加 <strong>拆分文本</strong>：文本选魔法变量 <strong>重复项目</strong>；分隔符选 <strong>制表符</strong>（Tab）。</li>
-        <li>搜索框搜 <strong>「项目」</strong> → 加 <strong>从列表中获取项目</strong>：输入选上一步；「索引」填 <strong>1</strong> → 长按结果设为变量 <code>日期时间</code>。</li>
-        <li>同样再加两次 <strong>从列表中获取项目</strong>：索引 <strong>2</strong> → 变量 <code>标题</code>；索引 <strong>3</strong> → 变量 <code>备注</code>。</li>
+        <li>搜索框搜 <strong>「项目」</strong> → 加 <strong>从列表中获取项目</strong>。
+          <div style="margin:6px 0 6px 0;padding:8px 10px;border-left:3px solid #ff8a8a;background:rgba(255,138,138,.08);border-radius:6px;font-size:12px">
+            ⚠️ <strong>最容易错的一步：</strong>这个动作自带一个输入框（通常写着"日期"或"列表"），<strong>必须点开它，改成上一步「按制表符拆分」的结果</strong>。如果它显示成 <code>从 日期… 获取</code>，就是接错了——因为"日期"只有 1 项，会报"索引超出范围"。正确显示应为 <code>从 拆分文本… 获取</code>。
+          </div>
+          把输入改对后，「索引」填 <strong>1</strong> → 长按结果设为变量 <code>日期时间</code>。</li>
+        <li>同样再加两次 <strong>从列表中获取项目</strong>（输入都选「按制表符拆分的结果」）：索引 <strong>2</strong> → 变量 <code>标题</code>；索引 <strong>3</strong> → 变量 <code>备注</code>。</li>
         <li>搜索框搜 <strong>「日期」</strong> → 加 <strong>日期</strong>：点它的日期框，选魔法变量 <code>日期时间</code>（把文本转成真正日期）→ 长按结果设为变量 <code>提醒日期</code>。</li>
         <li>搜索框搜 <strong>「提醒事项」</strong> → 加 <strong>添加提醒事项</strong>：标题选 <code>标题</code>，备注选 <code>备注</code>，打开 <strong>提醒</strong> 开关，到期日选 <code>提醒日期</code>。</li>
         <li>点右上角「完成」，把快捷指令命名为 <strong>批量添加排班提醒</strong>（必须这个名字，网页才能一键唤起）。</li>
       </ol>
-      <p style="margin:8px 0 0 18px;font-size:12px;opacity:.8">设置好后，每次排班更新，点上面的「⚡ 一键运行…」按钮：网页把全部排班复制到剪贴板并跳到快捷指令，你点运行就全部加进「提醒事项」，日期时间都是你设置的。若一键跳转不便，也可手动打开「快捷指令」App 点这个捷径运行（剪贴板已有数据）。</p>
+      <p style="margin:8px 0 0 18px;font-size:12px;opacity:.8">设置好后，每次排班更新，点上面的「⚡ 一键运行…」按钮：网页把全部排班复制到剪贴板并跳到快捷指令，你点运行就全部加进「提醒事项」，日期时间都是你设置的。若一键跳转不便，也可手动打开「快捷指令」App 点这个捷径运行——<strong>但前提是剪贴板里已经有清单</strong>（先点网页「📋 仅复制清单」或「💾 下载 .txt」），否则会什么也不创建。</p>
     </details>
 
     <div class="btn-row" style="margin-bottom:12px">
