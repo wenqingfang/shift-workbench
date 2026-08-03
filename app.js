@@ -797,8 +797,14 @@
 
   /* ================= 导出 ICS ================= */
   function icsTime(d) {
+    // floating local time（无 TZID），日历导入用
     return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' +
       pad(d.getHours()) + pad(d.getMinutes()) + '00';
+  }
+  function icsTimeUTC(d) {
+    // Apple 原生 UTC 格式，提醒事项解析最稳
+    return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + 'T' +
+      pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z';
   }
   function icsStamp() {
     const d = new Date();
@@ -813,11 +819,11 @@
     return out;
   }
   // 只生成「提醒事项」(VTODO)。日历(VEVENT)通道已移除。
+  // 采用 Apple 原生格式：UTC 时间 + Apple PRODID + 标准字段，最大限度兼容 iOS 提醒事项。
   function buildICS() {
     const L = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ShiftWorkbench//CN', 'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
-      'X-WR-CALNAME:我的排班提醒'
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Apple Inc.//iPhone OS 16.0//EN',
+      'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'
     ];
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
@@ -829,75 +835,59 @@
       if (d < from) return;
       const st = startAt(key, sh);
       count++;
-      /* ---- 提醒事项（VTODO）---- */
       const due = sh.alarm ? alarmAt(key, sh) : st;   // 到期 = 闹钟时间（提前 lead 分钟）
+      const created = icsStamp();
       L.push('BEGIN:VTODO');
       L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
-      L.push('DTSTAMP:' + icsStamp());
-      // 关键：iOS 提醒事项对 DTSTART;TZID=... 的解析很差，经常丢掉时间、只认日期，
-      // 导致「紧急」开关兜底成"下一小时"。实测用 floating time（去掉 TZID）能被正确识别。
-      // DTSTART 与 DUE 都用同一闹钟时间（上班前 lead 分钟），确保紧急按时响。
-      const dueStamp = icsTime(due);
+      L.push('DTSTAMP:' + created);
+      L.push('CREATED:' + created);
+      L.push('LAST-MODIFIED:' + created);
+      // Apple 原生用 UTC（Z 后缀），避免 floating/TZID 解析不一致导致时间丢失
+      const dueStamp = icsTimeUTC(due);
       L.push('DTSTART:' + dueStamp);
       L.push('DUE:' + dueStamp);
       L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班 · 准备'));
       L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
       L.push('PRIORITY:1');
       L.push('STATUS:NEEDS-ACTION');
-      // 主提醒：到期即响
-      L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
+      // 单条 VALARM：到期即响
+      L.push('BEGIN:VALARM');
+      L.push('ACTION:DISPLAY');
       L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
-      L.push('TRIGGER:PT0M'); L.push('END:VALARM');
-      // 多重阶梯提醒：到点前多次（落在 alarm→start 之间）
-      if (sh.alarm && S.multiAlarm !== false) {
-        [30, 15, 5].forEach((m) => {
-          const off = S.leadMinutes - m;          // 相对到期的正向偏移，使提醒落在上班前 m 分钟
-          if (off > 0) {
-            L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
-            L.push(fold('DESCRIPTION:还有 ' + m + ' 分钟 · ' + sh.name + ' ' + sh.start));
-            L.push('TRIGGER:PT' + off + 'M'); L.push('END:VALARM');
-          }
-        });
-      }
+      L.push('TRIGGER:PT0S');
+      L.push('END:VALARM');
       L.push('END:VTODO');
     });
     L.push('END:VCALENDAR');
     return { text: L.join('\r\n'), count: count };
   }
 
-  // 生成单天的 .ics（仅一条 VTODO）。iOS 导入「提醒事项」通常只认第一条 VTODO，
-  // 所以提供「每天单独导出」：把每天拆成独立文件，用户逐个加入，保证每天都有正确时间。
+  // 生成单天的 .ics（仅一条 VTODO），作为「邮件附件打开」的兜底尝试。
   function buildOneICS(key, sh) {
     const L = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ShiftWorkbench//CN', 'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
-      'X-WR-CALNAME:我的排班提醒'
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Apple Inc.//iPhone OS 16.0//EN',
+      'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'
     ];
     const st = startAt(key, sh);
     const due = sh.alarm ? alarmAt(key, sh) : st;
+    const created = icsStamp();
     L.push('BEGIN:VTODO');
     L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
-    L.push('DTSTAMP:' + icsStamp());
-    const dueStamp = icsTime(due);
+    L.push('DTSTAMP:' + created);
+    L.push('CREATED:' + created);
+    L.push('LAST-MODIFIED:' + created);
+    const dueStamp = icsTimeUTC(due);
     L.push('DTSTART:' + dueStamp);
     L.push('DUE:' + dueStamp);
     L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班 · 准备'));
     L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
     L.push('PRIORITY:1');
     L.push('STATUS:NEEDS-ACTION');
-    L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
+    L.push('BEGIN:VALARM');
+    L.push('ACTION:DISPLAY');
     L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
-    L.push('TRIGGER:PT0M'); L.push('END:VALARM');
-    if (sh.alarm && S.multiAlarm !== false) {
-      [30, 15, 5].forEach((m) => {
-        const off = S.leadMinutes - m;
-        if (off > 0) {
-          L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
-          L.push(fold('DESCRIPTION:还有 ' + m + ' 分钟 · ' + sh.name + ' ' + sh.start));
-          L.push('TRIGGER:PT' + off + 'M'); L.push('END:VALARM');
-        }
-      });
-    }
+    L.push('TRIGGER:PT0S');
+    L.push('END:VALARM');
     L.push('END:VTODO');
     L.push('END:VCALENDAR');
     return L.join('\r\n');
@@ -937,11 +927,11 @@
     $('#exportMenu').hidden = false;
     $('#copyArea').hidden = true;
     $('#icsKindHint').textContent =
-      '提醒事项每条都带「具体日期＋时间」（＝你设置的提前量对应的闹钟时间）。升级 iOS 26.2 后点该条 → 信息(i) → 打开「紧急」，会像闹钟一样响（静音/专注模式也响），且默认就是你文件里的时间，不用手填。「紧急」开关 .ics 无法自动打开，需手动点一下。';
-    // iOS 通过 Share Sheet 把 .ics 导入提醒事项时，系统扩展通常只读第一条 VTODO；
-    // 「文件」App 打开也可能只导入一条。这是 iOS 系统限制，不是文件问题。
+      '文件里每条提醒都带「具体日期＋时间」（＝你设置的提前量对应的闹钟时间），格式已按 Apple 原生 .ics（UTC + PRODID）输出。若 iOS 能正常导入，点该条 → 信息(i) → 打开「紧急」，日期和时间就是你文件里的，不用手填。';
+    // iPhone 通过「分享/文件」打开 .ics 到提醒事项时，系统经常只解析一条，甚至仅把文件当附件。
+    // 这是 iOS 限制，不是文件格式问题。最稳的批量方案见「iPhone 提醒事项 / 系统闹钟」抽屉。
     $('#icsMultiHint').textContent = r.count > 1
-      ? '⚠️ 你的文件里已包含 ' + r.count + ' 条提醒（每条日期/时间都正确），但 iOS 导入「提醒事项」时通常只认第一条。最省事的做法：去「设置 iPhone 提醒事项」点「⚡ 生成一键加提醒事项快捷指令」，一次把所有排班都加进提醒事项（带日期+时间+高优先级）。'
+      ? '⚠️ iPhone 直接导入 .ics 到「提醒事项」通常只能得到一条，或只把文件当附件（你截图就是这种情况）。想一次导入 ' + r.count + ' 天，请关闭这个抽屉，点「iPhone 提醒事项 / 系统闹钟」里的「⚡ 一键运行批量添加排班提醒」。'
       : '';
     openSheet('#sheetIcs');
   }
@@ -1262,232 +1252,98 @@
      iOS「创建闹钟」动作只能设置时间（HH:MM），不能指定具体日期，
      因此这里按未来 7 天的排班生成多个 Add Alarm 动作，运行一次全部加入时钟 App。
      文件格式：Apple 二进制 plist（bplist00）。 */
-  function bytesBPList(root) {
-    const EPOCH = Date.UTC(2001, 0, 1, 0, 0, 0) / 1000;
-    const objects = [];
-    const refMap = new Map();
-
-    function stableKey(v) {
-      if (v === null) return '\x00null';
-      if (v === true) return '\x00true';
-      if (v === false) return '\x00false';
-      const t = typeof v;
-      if (t === 'number') return '\x00num:' + v;
-      if (v instanceof Date) return '\x00date:' + v.getTime();
-      if (t === 'string') return '\x00str:' + v;
-      if (Array.isArray(v)) return '\x00arr[' + v.map(stableKey).join(',') + ']';
-      if (v && t === 'object') {
-        const keys = Object.keys(v).sort();
-        return '\x00obj{' + keys.map((k) => JSON.stringify(k) + ':' + stableKey(v[k])).join(',') + '}';
-      }
-      return '\x00unk';
-    }
-
-    function visit(v) {
-      const k = stableKey(v);
-      if (refMap.has(k)) return refMap.get(k);
-      const idx = objects.length;
-      refMap.set(k, idx);
-      objects.push(v);
-      if (Array.isArray(v)) {
-        v.forEach(visit);
-      } else if (v && typeof v === 'object') {
-        Object.keys(v).forEach((kk) => { visit(kk); visit(v[kk]); });
-      }
-      return idx;
-    }
-
-    visit(root);
-
-    function uintBytes(v, n) {
-      const out = [];
-      for (let i = n - 1; i >= 0; i--) out.push((v >> (i * 8)) & 0xff);
-      return out;
-    }
-
-    function encodeInt(n) {
-      if (n <= 0xff) return [0x10, n];
-      if (n <= 0xffff) return [0x11, (n >> 8) & 0xff, n & 0xff];
-      if (n <= 0xffffffff) return [0x12, (n >> 24) & 0xff, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
-      return [0x13, 0, 0, 0, (n >> 24) & 0xff, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
-    }
-
-    const numObjects = objects.length;
-    const refSize = numObjects <= 0xff ? 1 : numObjects <= 0xffff ? 2 : 4;
-
-    function refBytes(idx) {
-      if (refSize === 1) return [idx & 0xff];
-      if (refSize === 2) return [(idx >> 8) & 0xff, idx & 0xff];
-      return [(idx >> 24) & 0xff, (idx >> 16) & 0xff, (idx >> 8) & 0xff, idx & 0xff];
-    }
-
-    function strToAsciiBytes(s) {
-      const out = [];
-      for (let i = 0; i < s.length; i++) out.push(s.charCodeAt(i) & 0xff);
-      return out;
-    }
-
-    function strToUtf16BE(s) {
-      const out = [];
-      for (let i = 0; i < s.length; i++) {
-        const c = s.charCodeAt(i);
-        out.push((c >> 8) & 0xff, c & 0xff);
-      }
-      return out;
-    }
-
-    function encodeValue(v) {
-      if (v === null) return [0x00];
-      if (v === false) return [0x08];
-      if (v === true) return [0x09];
-      if (typeof v === 'number') {
-        if (Number.isInteger(v) && v >= 0 && v < 0x100000000) return encodeInt(v);
-        const arr = [0x23];
-        const buf = new ArrayBuffer(8);
-        new DataView(buf).setFloat64(0, v, false);
-        arr.push(...new Uint8Array(buf));
-        return arr;
-      }
-      if (v instanceof Date) {
-        const arr = [0x33];
-        const buf = new ArrayBuffer(8);
-        new DataView(buf).setFloat64(0, v.getTime() / 1000 - EPOCH, false);
-        arr.push(...new Uint8Array(buf));
-        return arr;
-      }
-      if (typeof v === 'string') {
-        const ascii = /^[\x00-\x7f]*$/.test(v);
-        if (ascii) {
-          const bytes = strToAsciiBytes(v);
-          const n = bytes.length;
-          if (n < 15) return [0x50 | n, ...bytes];
-          return [0x5f, ...encodeInt(n), ...bytes];
-        } else {
-          const bytes = strToUtf16BE(v);
-          const n = v.length;
-          if (n < 15) return [0x60 | n, ...bytes];
-          return [0x6f, ...encodeInt(n), ...bytes];
-        }
-      }
-      if (Array.isArray(v)) {
-        const refs = v.map((x) => refMap.get(stableKey(x)));
-        const n = refs.length;
-        const head = n < 15 ? [0xa0 | n] : [0xaf, ...encodeInt(n)];
-        return [...head, ...refs.flatMap(refBytes)];
-      }
-      if (v && typeof v === 'object') {
-        const keys = Object.keys(v);
-        const krefs = keys.map((k) => refMap.get(stableKey(k)));
-        const vrefs = keys.map((k) => refMap.get(stableKey(v[k])));
-        const n = keys.length;
-        const head = n < 15 ? [0xd0 | n] : [0xdf, ...encodeInt(n)];
-        return [...head, ...krefs.flatMap(refBytes), ...vrefs.flatMap(refBytes)];
-      }
-      throw new Error('unsupported bplist value');
-    }
-
-    const chunks = objects.map(encodeValue);
-    const offsetTable = [];
-    let pos = 8;
-    for (const c of chunks) {
-      offsetTable.push(pos);
-      pos += c.length;
-    }
-
-    const offsetSize = pos <= 0xff ? 1 : pos <= 0xffff ? 2 : pos <= 0xffffffff ? 4 : 8;
-    const offsetTableArr = [];
-    for (const off of offsetTable) {
-      if (offsetSize === 1) offsetTableArr.push(off & 0xff);
-      else if (offsetSize === 2) offsetTableArr.push((off >> 8) & 0xff, off & 0xff);
-      else if (offsetSize === 4) offsetTableArr.push((off >> 24) & 0xff, (off >> 16) & 0xff, (off >> 8) & 0xff, off & 0xff);
-      else {
-        const big = BigInt.asUintN(64, BigInt(off));
-        for (let i = 7; i >= 0; i--) offsetTableArr.push(Number((big >> BigInt(i * 8)) & BigInt(0xff)));
-      }
-    }
-
-    const trailer = new Uint8Array(33);
-    trailer[6] = 0;
-    trailer[7] = offsetSize;
-    trailer[8] = refSize;
-    const setUint64 = (arr, off, val) => {
-      const big = BigInt.asUintN(64, BigInt(val));
-      for (let i = 0; i < 8; i++) arr[off + 7 - i] = Number((big >> BigInt(i * 8)) & BigInt(0xff));
-    };
-    setUint64(trailer, 9, numObjects);
-    setUint64(trailer, 17, 0);
-    setUint64(trailer, 25, pos);
-
-    const totalLen = 8 + chunks.reduce((a, c) => a + c.length, 0) + offsetTableArr.length + 33;
-    const out = new Uint8Array(totalLen);
-    let p = 0;
-    const write = (arr) => { out.set(arr, p); p += arr.length; };
-    write(strToAsciiBytes('bplist00'));
-    chunks.forEach(write);
-    write(offsetTableArr);
-    write(trailer);
-    return out;
-  }
-
-  function buildShortcutPlist() {
-    // 遍历所有未来排班（不限天数），每条生成一个「添加提醒事项」动作，带完整日期+时间
-    const items = [];
+  /* ================= 批量创建提醒事项（绕过 iOS 不支持 .ics 批量导入）=================
+     iPhone 直接导入 .ics 到「提醒事项」通常只能得到一条，或只把文件当附件（截图就是）。
+     真正能一次创建 N 条提醒事项的方法是：在「快捷指令」App 里建一个简单捷径，
+     读取我们生成的文本清单，循环「添加提醒事项」。这里生成该清单。
+     每行格式：YYYY-MM-DD HH:MM\t标题\t备注（Tab 分隔），方便 shortcuts 按 Tab 拆分。
+   */
+  const BATCH_SHORTCUT_NAME = '批量添加排班提醒';
+  function buildRemindersList() {
+    const lines = [];
     const now = new Date();
     Object.keys(S.schedule).sort().forEach((key) => {
       const sh = shiftOf(key);
       if (!sh || !sh.start) return;
       const a = alarmAt(key, sh);
       if (!a || a < now) return;
-      const d = parseYmd(key);
-      items.push({ key: key, date: d, shift: sh, time: a, start: startAt(key, sh) });
+      const y = a.getFullYear();
+      const m = pad(a.getMonth() + 1);
+      const d = pad(a.getDate());
+      const hh = pad(a.getHours());
+      const mm = pad(a.getMinutes());
+      const datetime = y + '-' + m + '-' + d + ' ' + hh + ':' + mm; // Shortcuts 可直接解析为日期
+      const title = sh.name + ' ' + sh.start + ' 上班 · 准备';
+      const note = '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成';
+      lines.push([datetime, title, note].join('\t'));
     });
-    if (!items.length) return null;
-    const actions = items.map((it) => ({
-      WFWorkflowActionIdentifier: 'is.workflow.actions.addnewreminder',
-      WFWorkflowActionParameters: {
-        WFCalendarItemTitle: it.shift.name + ' ' + it.shift.start + ' 上班 · 准备',
-        WFCalendarItemNotes: '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成',
-        WFAlertEnabled: true,
-        WFAlertCondition: 'At Time',
-        WFAlertCustomTime: it.time,   // 完整 Date（含日期+时间），iOS 到点提醒
-        WFPriority: 'High',
-        WFFlag: false
-      }
-    }));
-
-    return {
-      WFWorkflow: {
-        WFWorkflowActions: actions,
-        WFWorkflowClientRelease: '3.0',
-        WFWorkflowClientVersion: 1092,
-        WFWorkflowIcon: {
-          WFWorkflowIconGlyphNumber: 61456,
-          WFWorkflowIconStartColor: 4292093695
-        },
-        WFWorkflowImportQuestions: [],
-        WFWorkflowMinimumClientVersion: 900,
-        WFWorkflowMinimumClientVersionString: '900',
-        WFWorkflowName: '班次提醒事项',
-        WFWorkflowOutputContentItemClasses: [],
-        WFWorkflowTypes: []
-      }
-    };
+    return lines.join('\n');
   }
 
-  function downloadShortcut() {
-    const plist = buildShortcutPlist();
-    if (!plist) { toast('还没有可生成的提醒事项'); return; }
-    const bytes = bytesBPList(plist);
-    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+  function copyRemindersList() {
+    const text = buildRemindersList();
+    if (!text) { toast('还没有可生成的提醒事项'); return; }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+        .then(() => toast('已复制 ' + text.split('\n').length + ' 条提醒清单'))
+        .catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    toast(ok ? '已复制 ' + text.split('\n').length + ' 条提醒清单' : '复制失败，请用「下载清单」方式');
+  }
+
+  function downloadRemindersList() {
+    const text = buildRemindersList();
+    if (!text) { toast('还没有可生成的提醒事项'); return; }
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = '班次提醒事项.shortcut';
+    a.href = url; a.download = '班次提醒清单.txt';
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-    toast('已下载 .shortcut · 用「文件」App 点开 → 分享到「快捷指令」运行，即可一次加入全部排班');
+    toast('已下载清单 · 按下方步骤在「快捷指令」App 运行一次即可全部添加');
   }
 
-  $('#btnShortcut').addEventListener('click', downloadShortcut);
+  function runBatchShortcut() {
+    const text = buildRemindersList();
+    if (!text) { toast('还没有可生成的提醒事项'); return; }
+    const doOpen = () => {
+      const url = 'shortcuts://run-shortcut?name=' + encodeURIComponent(BATCH_SHORTCUT_NAME) + '&input=clipboard';
+      const a = document.createElement('a');
+      a.href = url; a.style.display = 'none';
+      document.body.appendChild(a);
+      try { a.click(); } catch (e) {}
+      setTimeout(() => a.remove(), 600);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        toast('已复制 ' + text.split('\n').length + ' 条 · 正在唤起快捷指令…');
+        doOpen();
+      }).catch(() => {
+        fallbackCopy(text);
+        doOpen();
+      });
+    } else {
+      fallbackCopy(text);
+      doOpen();
+    }
+  }
+
+  $('#btnRunRemindersShortcut').addEventListener('click', runBatchShortcut);
+  $('#btnCopyReminders').addEventListener('click', copyRemindersList);
+  $('#btnDownloadReminders').addEventListener('click', downloadRemindersList);
 
   function scheduleNextAlarm() {
     clearTimeout(alarmTimer);
