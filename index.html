@@ -368,13 +368,13 @@
 
     <details class="hint-box" open style="margin-bottom:12px">
       <summary style="cursor:pointer;font-weight:600">⚡ 首次设置：在 iPhone 搭一个「批量添加排班提醒」捷径（只需一次）</summary>
-      <p style="margin:8px 0 4px 2px;font-size:12.5px;opacity:.85">iOS 26 把动作菜单位置改了，<strong>不用在菜单里翻，直接在每个动作的搜索框里打下面括号里的关键词</strong>就能找到。清单格式：<code>2026/08/05 07:00[TAB]早班 08:00 上班 · 准备[TAB]提前 60 分钟提醒</code>。</p>
+      <p style="margin:8px 0 4px 2px;font-size:12.5px;opacity:.85">iOS 26 把动作菜单位置改了，<strong>不用在菜单里翻，直接在每个动作的搜索框里打下面括号里的关键词</strong>就能找到。清单格式：<code>2026/08/05 07:00 | 早班 08:00 上班 · 准备 | 提前 60 分钟提醒</code>（用 <code>|</code> 竖线分隔，在键盘里直接打）。</p>
       <ol style="margin:8px 0 0 18px;line-height:1.7;font-size:13px">
         <li>打开 iPhone「快捷指令」App → 点右上角 <strong>+</strong> 新建快捷指令。</li>
         <li>搜索框搜 <strong>「剪贴板」</strong> → 添加动作 <strong>获取剪贴板</strong>。</li>
         <li>搜索框搜 <strong>「拆分」</strong> → 添加 <strong>拆分文本</strong>：文本选上一步的<strong>剪贴板</strong>；分隔符选 <strong>新行</strong>。</li>
         <li>搜索框搜 <strong>「重复」</strong> → 添加 <strong>针对每一项重复</strong>：输入选上一步的<strong>拆分结果</strong>。</li>
-        <li>在循环里，搜索框搜 <strong>「拆分」</strong> → 加 <strong>拆分文本</strong>：文本选魔法变量 <strong>重复项目</strong>；分隔符选 <strong>制表符</strong>（Tab）。</li>
+        <li>在循环里，搜索框搜 <strong>「拆分」</strong> → 加 <strong>拆分文本</strong>：文本选魔法变量 <strong>重复项目</strong>；分隔符选 <strong>自定义，输入一个竖线 |</strong>（就是网页清单里用的那个分隔符）。</li>
         <li>搜索框搜 <strong>「项目」</strong> → 加 <strong>从列表中获取项目</strong>：
           <div style="margin:6px 0 6px 0;padding:8px 10px;border-left:3px solid #ff8a8a;background:rgba(255,138,138,.08);border-radius:6px;font-size:12px">
             ⚠️ <strong>最容易错：</strong>这个动作自带的输入框（常写着"日期"或"列表"）<strong>必须改成上一步「按制表符拆分」的结果</strong>。如果显示成 <code>从 日期… 获取</code> 就是接错了，会报"索引超出范围"。正确应为 <code>从 拆分文本… 获取</code>。

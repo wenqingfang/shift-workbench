@@ -1256,7 +1256,7 @@
      iPhone 直接导入 .ics 到「提醒事项」通常只能得到一条，或只把文件当附件（截图就是）。
      真正能一次创建 N 条提醒事项的方法是：在「快捷指令」App 里建一个简单捷径，
      读取我们生成的文本清单，循环「添加提醒事项」。这里生成该清单。
-     每行格式：YYYY/MM/DD HH:MM\t标题\t备注（Tab 分隔），方便 shortcuts 按 Tab 拆分。
+     每行格式：YYYY/MM/DD HH:MM | 标题 | 备注（| 竖线分隔，iOS 26 没有制表符预设，用竖线最好输入）。
      注意：和网页闹钟清单共用 upcomingAlarms() 数据源，保证网页看到几条，剪贴板就几条。
    */
   const BATCH_SHORTCUT_NAME = '批量添加排班提醒';
@@ -1272,7 +1272,7 @@
       const datetime = y + '/' + m + '/' + d + ' ' + hh + ':' + mm; // iOS 中文系统最容易识别的日期时间格式
       const title = it.shift.name + ' ' + it.shift.start + ' 上班 · 准备';
       const note = '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成';
-      lines.push([datetime, title, note].join('\t'));
+      lines.push([datetime, title, note].join(' | '));
     });
     return lines.join('\n');
   }
