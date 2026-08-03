@@ -919,7 +919,7 @@
     const cal = currentKind === 'event';
     $('#icsKindHint').textContent = cal
       ? '日历提醒每次只响一下（iOS 限制）。已开启「多次提醒」时会在到点前多次响铃；若仍怕睡过头，请在「时钟」App 另设同时间闹钟。'
-      : '提醒事项会在到点弹出通知；升级到 iOS 26.2 后，把导入的提醒事项标记为「紧急」，会像闹钟一样响（静音/专注模式下也响），最适合防睡过头。导入后在「提醒事项」里点该条 → 信息(i) → 打开「紧急」即可。';
+      : '提醒事项会在到点弹出通知；已设置高优先级方便查找。升级到 iOS 26.2 后，点该条 → 信息(i) → 打开「紧急」，会像闹钟一样响（静音/专注模式也响）。注意：「紧急」是智能列表，.ics 没有对应字段，导入时无法自动打开。';
     $$('#icsKindSeg .seg').forEach((b) => b.classList.toggle('on', b.dataset.kind === currentKind));
     openSheet('#sheetIcs');
   }
@@ -1235,6 +1235,223 @@
     setTimeout(() => a.remove(), 600);
     toast('已尝试打开「时钟」App，没反应就手动打开并逐个加');
   });
+
+  /* ================= 一键加闹钟快捷指令（.shortcut） =================
+     iOS「创建闹钟」动作只能设置时间（HH:MM），不能指定具体日期，
+     因此这里按未来 7 天的排班生成多个 Add Alarm 动作，运行一次全部加入时钟 App。
+     文件格式：Apple 二进制 plist（bplist00）。 */
+  function bytesBPList(root) {
+    const EPOCH = Date.UTC(2001, 0, 1, 0, 0, 0) / 1000;
+    const objects = [];
+    const refMap = new Map();
+
+    function stableKey(v) {
+      if (v === null) return '\x00null';
+      if (v === true) return '\x00true';
+      if (v === false) return '\x00false';
+      const t = typeof v;
+      if (t === 'number') return '\x00num:' + v;
+      if (v instanceof Date) return '\x00date:' + v.getTime();
+      if (t === 'string') return '\x00str:' + v;
+      if (Array.isArray(v)) return '\x00arr[' + v.map(stableKey).join(',') + ']';
+      if (v && t === 'object') {
+        const keys = Object.keys(v).sort();
+        return '\x00obj{' + keys.map((k) => JSON.stringify(k) + ':' + stableKey(v[k])).join(',') + '}';
+      }
+      return '\x00unk';
+    }
+
+    function visit(v) {
+      const k = stableKey(v);
+      if (refMap.has(k)) return refMap.get(k);
+      const idx = objects.length;
+      refMap.set(k, idx);
+      objects.push(v);
+      if (Array.isArray(v)) {
+        v.forEach(visit);
+      } else if (v && typeof v === 'object') {
+        Object.keys(v).forEach((kk) => { visit(kk); visit(v[kk]); });
+      }
+      return idx;
+    }
+
+    visit(root);
+
+    function uintBytes(v, n) {
+      const out = [];
+      for (let i = n - 1; i >= 0; i--) out.push((v >> (i * 8)) & 0xff);
+      return out;
+    }
+
+    function encodeInt(n) {
+      if (n <= 0xff) return [0x10, n];
+      if (n <= 0xffff) return [0x11, (n >> 8) & 0xff, n & 0xff];
+      if (n <= 0xffffffff) return [0x12, (n >> 24) & 0xff, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+      return [0x13, 0, 0, 0, (n >> 24) & 0xff, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+    }
+
+    const numObjects = objects.length;
+    const refSize = numObjects <= 0xff ? 1 : numObjects <= 0xffff ? 2 : 4;
+
+    function refBytes(idx) {
+      if (refSize === 1) return [idx & 0xff];
+      if (refSize === 2) return [(idx >> 8) & 0xff, idx & 0xff];
+      return [(idx >> 24) & 0xff, (idx >> 16) & 0xff, (idx >> 8) & 0xff, idx & 0xff];
+    }
+
+    function strToAsciiBytes(s) {
+      const out = [];
+      for (let i = 0; i < s.length; i++) out.push(s.charCodeAt(i) & 0xff);
+      return out;
+    }
+
+    function strToUtf16BE(s) {
+      const out = [];
+      for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        out.push((c >> 8) & 0xff, c & 0xff);
+      }
+      return out;
+    }
+
+    function encodeValue(v) {
+      if (v === null) return [0x00];
+      if (v === false) return [0x08];
+      if (v === true) return [0x09];
+      if (typeof v === 'number') {
+        if (Number.isInteger(v) && v >= 0 && v < 0x100000000) return encodeInt(v);
+        const arr = [0x23];
+        const buf = new ArrayBuffer(8);
+        new DataView(buf).setFloat64(0, v, false);
+        arr.push(...new Uint8Array(buf));
+        return arr;
+      }
+      if (v instanceof Date) {
+        const arr = [0x33];
+        const buf = new ArrayBuffer(8);
+        new DataView(buf).setFloat64(0, v.getTime() / 1000 - EPOCH, false);
+        arr.push(...new Uint8Array(buf));
+        return arr;
+      }
+      if (typeof v === 'string') {
+        const ascii = /^[\x00-\x7f]*$/.test(v);
+        if (ascii) {
+          const bytes = strToAsciiBytes(v);
+          const n = bytes.length;
+          if (n < 15) return [0x50 | n, ...bytes];
+          return [0x5f, ...encodeInt(n), ...bytes];
+        } else {
+          const bytes = strToUtf16BE(v);
+          const n = v.length;
+          if (n < 15) return [0x60 | n, ...bytes];
+          return [0x6f, ...encodeInt(n), ...bytes];
+        }
+      }
+      if (Array.isArray(v)) {
+        const refs = v.map((x) => refMap.get(stableKey(x)));
+        const n = refs.length;
+        const head = n < 15 ? [0xa0 | n] : [0xaf, ...encodeInt(n)];
+        return [...head, ...refs.flatMap(refBytes)];
+      }
+      if (v && typeof v === 'object') {
+        const keys = Object.keys(v);
+        const krefs = keys.map((k) => refMap.get(stableKey(k)));
+        const vrefs = keys.map((k) => refMap.get(stableKey(v[k])));
+        const n = keys.length;
+        const head = n < 15 ? [0xd0 | n] : [0xdf, ...encodeInt(n)];
+        return [...head, ...krefs.flatMap(refBytes), ...vrefs.flatMap(refBytes)];
+      }
+      throw new Error('unsupported bplist value');
+    }
+
+    const chunks = objects.map(encodeValue);
+    const offsetTable = [];
+    let pos = 8;
+    for (const c of chunks) {
+      offsetTable.push(pos);
+      pos += c.length;
+    }
+
+    const offsetSize = pos <= 0xff ? 1 : pos <= 0xffff ? 2 : pos <= 0xffffffff ? 4 : 8;
+    const offsetTableArr = [];
+    for (const off of offsetTable) {
+      if (offsetSize === 1) offsetTableArr.push(off & 0xff);
+      else if (offsetSize === 2) offsetTableArr.push((off >> 8) & 0xff, off & 0xff);
+      else if (offsetSize === 4) offsetTableArr.push((off >> 24) & 0xff, (off >> 16) & 0xff, (off >> 8) & 0xff, off & 0xff);
+      else {
+        const big = BigInt.asUintN(64, BigInt(off));
+        for (let i = 7; i >= 0; i--) offsetTableArr.push(Number((big >> BigInt(i * 8)) & BigInt(0xff)));
+      }
+    }
+
+    const trailer = new Uint8Array(33);
+    trailer[6] = 0;
+    trailer[7] = offsetSize;
+    trailer[8] = refSize;
+    const setUint64 = (arr, off, val) => {
+      const big = BigInt.asUintN(64, BigInt(val));
+      for (let i = 0; i < 8; i++) arr[off + 7 - i] = Number((big >> BigInt(i * 8)) & BigInt(0xff));
+    };
+    setUint64(trailer, 9, numObjects);
+    setUint64(trailer, 17, 0);
+    setUint64(trailer, 25, pos);
+
+    const totalLen = 8 + chunks.reduce((a, c) => a + c.length, 0) + offsetTableArr.length + 33;
+    const out = new Uint8Array(totalLen);
+    let p = 0;
+    const write = (arr) => { out.set(arr, p); p += arr.length; };
+    write(strToAsciiBytes('bplist00'));
+    chunks.forEach(write);
+    write(offsetTableArr);
+    write(trailer);
+    return out;
+  }
+
+  function buildShortcutPlist() {
+    const items = upcomingAlarms(7);
+    if (!items.length) return null;
+    const actions = items.map((it) => ({
+      WFWorkflowActionIdentifier: 'is.workflow.actions.alarm.create',
+      WFWorkflowActionParameters: {
+        WFAlarmTime: hhmm(it.time),
+        WFLabel: it.shift.name + ' ' + it.shift.start + ' 上班 · ' + (it.date.getMonth() + 1) + '/' + it.date.getDate(),
+        WFSnooze: false
+      }
+    }));
+
+    return {
+      WFWorkflow: {
+        WFWorkflowActions: actions,
+        WFWorkflowClientRelease: '3.0',
+        WFWorkflowClientVersion: 1092,
+        WFWorkflowIcon: {
+          WFWorkflowIconGlyphNumber: 61456,
+          WFWorkflowIconStartColor: 4292093695
+        },
+        WFWorkflowImportQuestions: [],
+        WFWorkflowMinimumClientVersion: 900,
+        WFWorkflowMinimumClientVersionString: '900',
+        WFWorkflowName: '班次闹钟',
+        WFWorkflowOutputContentItemClasses: [],
+        WFWorkflowTypes: []
+      }
+    };
+  }
+
+  function downloadShortcut() {
+    const plist = buildShortcutPlist();
+    if (!plist) { toast('还没有可生成的闹钟'); return; }
+    const bytes = bytesBPList(plist);
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '班次闹钟.shortcut';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+    toast('已下载 .shortcut · 用「文件」App 点开 → 分享到「快捷指令」运行');
+  }
+
+  $('#btnShortcut').addEventListener('click', downloadShortcut);
 
   function scheduleNextAlarm() {
     clearTimeout(alarmTimer);
