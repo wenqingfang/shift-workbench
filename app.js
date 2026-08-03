@@ -812,10 +812,13 @@
     while (rest.length) { out += '\r\n ' + rest.slice(0, 73); rest = rest.slice(73); }
     return out;
   }
-  function buildICS() {
+  function buildICS(kind) {
+    kind = kind || 'todo';
     const L = [
       'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ShiftWorkbench//CN', 'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH', 'X-WR-CALNAME:我的排班闹钟', 'X-WR-TIMEZONE:Asia/Shanghai',
+      'METHOD:PUBLISH',
+      kind === 'todo' ? 'X-WR-CALNAME:我的排班提醒' : 'X-WR-CALNAME:我的排班闹钟',
+      'X-WR-TIMEZONE:Asia/Shanghai',
       'BEGIN:VTIMEZONE', 'TZID:Asia/Shanghai',
       'BEGIN:STANDARD', 'DTSTART:19700101T000000',
       'TZOFFSETFROM:+0800', 'TZOFFSETTO:+0800', 'TZNAME:CST',
@@ -839,59 +842,90 @@
         en = new Date(st.getTime() + 4 * 3600000);
       }
       count++;
-      L.push('BEGIN:VEVENT');
-      L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
-      L.push('DTSTAMP:' + icsStamp());
-      L.push('DTSTART;TZID=Asia/Shanghai:' + icsTime(st));
-      L.push('DTEND;TZID=Asia/Shanghai:' + icsTime(en));
-      L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班'));
-      L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
-      if (sh.alarm) {
-        // 多重阶梯提醒：主提醒 + 到点前更临近的几次，避免只响一次睡过头
-        const leads = [S.leadMinutes];
-        if (S.multiAlarm !== false) {
-          [30, 15, 5].forEach((m) => { if (m < S.leadMinutes && leads.indexOf(m) < 0) leads.push(m); });
+      if (kind === 'todo') {
+        /* ---- 提醒事项（VTODO）---- */
+        const due = sh.alarm ? alarmAt(key, sh) : st;   // 到期 = 闹钟时间（提前 lead 分钟）
+        L.push('BEGIN:VTODO');
+        L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
+        L.push('DTSTAMP:' + icsStamp());
+        L.push('DUE;TZID=Asia/Shanghai:' + icsTime(due));
+        L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班 · 准备'));
+        L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
+        L.push('PRIORITY:1');
+        L.push('STATUS:NEEDS-ACTION');
+        // 主提醒：到期即响
+        L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
+        L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
+        L.push('TRIGGER:PT0S'); L.push('END:VALARM');
+        // 多重阶梯提醒：到点前多次（落在 alarm→start 之间）
+        if (sh.alarm && S.multiAlarm !== false) {
+          [30, 15, 5].forEach((m) => {
+            const off = S.leadMinutes - m;          // 相对到期的正向偏移，使提醒落在上班前 m 分钟
+            if (off > 0) {
+              L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
+              L.push(fold('DESCRIPTION:还有 ' + m + ' 分钟 · ' + sh.name + ' ' + sh.start));
+              L.push('TRIGGER:PT' + off + 'M'); L.push('END:VALARM');
+            }
+          });
         }
-        leads.sort((a, b) => b - a); // 由早到晚
-        leads.forEach((m) => {
-          L.push('BEGIN:VALARM');
-          L.push('ACTION:DISPLAY');
-          L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
-          L.push('TRIGGER:-PT' + m + 'M');
-          L.push('END:VALARM');
-        });
+        L.push('END:VTODO');
+      } else {
+        /* ---- 日历（VEVENT）---- */
+        L.push('BEGIN:VEVENT');
+        L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
+        L.push('DTSTAMP:' + icsStamp());
+        L.push('DTSTART;TZID=Asia/Shanghai:' + icsTime(st));
+        L.push('DTEND;TZID=Asia/Shanghai:' + icsTime(en));
+        L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班'));
+        L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
+        if (sh.alarm) {
+          // 多重阶梯提醒：主提醒 + 到点前更临近的几次，避免只响一次睡过头
+          const leads = [S.leadMinutes];
+          if (S.multiAlarm !== false) {
+            [30, 15, 5].forEach((m) => { if (m < S.leadMinutes && leads.indexOf(m) < 0) leads.push(m); });
+          }
+          leads.sort((a, b) => b - a); // 由早到晚
+          leads.forEach((m) => {
+            L.push('BEGIN:VALARM');
+            L.push('ACTION:DISPLAY');
+            L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
+            L.push('TRIGGER:-PT' + m + 'M');
+            L.push('END:VALARM');
+          });
+        }
+        L.push('END:VEVENT');
       }
-      L.push('END:VEVENT');
     });
     L.push('END:VCALENDAR');
     return { text: L.join('\r\n'), count: count };
   }
-  $('#btnExport').addEventListener('click', () => {
-    const r = buildICS();
-    if (!r.count) { toast('还没有可导出的排班'); return; }
-    exportIcs(r);
-  });
-
-  /**
-   * 导出 ICS：
-   * iOS 对 .ics 的导入方式版本差异很大：有的设备 Web Share 面板直接出「日历」，
-   * 有的只有「保存到文件」；Safari 直接打开 blob URL 也可能被当成源码。
-   * 因此改为「导出菜单」：让用户在多种导入方式中挑选当前设备可用的一种。
-   */
+  /* ================= 导出：日历 / 提醒事项（.ics 通用，组件不同） ================= */
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const ICS_FILE = '我的排班闹钟.ics';
   const ICS_TYPE = 'text/calendar';
-  let currentIcs = null;   // 当前打开导出菜单时对应的 ICS 数据
+  let currentIcs = null;     // 当前打开导出菜单时对应的 ICS 数据
+  let currentKind = 'todo';  // 'todo'=提醒事项, 'event'=日历
 
-  function exportIcs(r) {
+  function exportIcs(kind) {
+    currentKind = kind || 'todo';
+    const r = buildICS(currentKind);
+    if (!r.count) { toast('还没有可导出的排班'); return; }
     currentIcs = r;
     $('#icsCount').textContent = r.count + ' 天';
     $('#icsText').value = r.text;
     $('#exportMenu').hidden = false;
     $('#copyArea').hidden = true;
+    const cal = currentKind === 'event';
+    $('#icsKindHint').textContent = cal
+      ? '日历提醒每次只响一下（iOS 限制）。已开启「多次提醒」时会在到点前多次响铃；若仍怕睡过头，请在「时钟」App 另设同时间闹钟。'
+      : '提醒事项会在到点弹出通知；升级到 iOS 26.2 后，把导入的提醒事项标记为「紧急」，会像闹钟一样响（静音/专注模式下也响），最适合防睡过头。导入后在「提醒事项」里点该条 → 信息(i) → 打开「紧急」即可。';
+    $$('#icsKindSeg .seg').forEach((b) => b.classList.toggle('on', b.dataset.kind === currentKind));
     openSheet('#sheetIcs');
   }
+
+  $('#btnExport').addEventListener('click', () => exportIcs(currentKind));
+  $$('#icsKindSeg .seg').forEach((b) => b.addEventListener('click', () => exportIcs(b.dataset.kind)));
 
   // 1) Web Share 文件分享
   function shareIcs() {
@@ -900,8 +934,8 @@
     if (!navigator.share || !window.File) { toast('当前环境不支持系统分享'); return; }
     try {
       const file = new File([r.text], ICS_FILE, { type: ICS_TYPE });
-      navigator.share({ files: [file], title: '我的排班闹钟' })
-        .then(() => toast('请选择「日历」导入'))
+      navigator.share({ files: [file], title: '我的排班提醒' })
+        .then(() => toast(currentKind === 'event' ? '请选择「日历」导入' : '请选择「提醒事项」导入'))
         .catch((err) => {
           if (err && err.name === 'AbortError') return;
           toast('分享失败，请换其他方式');
@@ -932,7 +966,7 @@
       a.href = uri; a.target = '_blank';
       document.body.appendChild(a); a.click();
       setTimeout(() => a.remove(), 500);
-      toast('请在弹出的页面选择「日历」导入');
+      toast(currentKind === 'event' ? '请在弹窗选择「日历」导入' : '请在弹窗选择「提醒事项」导入');
     } catch (e) {
       toast('无法直接打开，请用「保存到文件」方式');
     }
@@ -950,7 +984,7 @@
       a.href = url; a.download = ICS_FILE;
       document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-      toast('已保存 · 打开「文件」App 点击该 .ics 即可导入日历');
+      toast('已保存 · 在「文件」App 点击该 .ics 即可导入' + (currentKind === 'event' ? '日历' : '提醒事项'));
     } catch (e) {
       toast('当前环境不支持下载，请复制全文');
     }
@@ -972,19 +1006,13 @@
       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
       if (!ok && navigator.clipboard) {
         navigator.clipboard.writeText(ta.value)
-          .then(() => toast('已复制 · 存成 .ics 文件后用日历打开'))
+          .then(() => toast('已复制 · 存成 .ics 后用' + (currentKind === 'event' ? '日历' : '提醒事项') + '打开'))
           .catch(() => toast('请手动长按文本框选择复制'));
         return;
       }
-      toast(ok ? '已复制 · 存成 .ics 文件后用日历打开' : '请手动长按文本框选择复制');
+      toast(ok ? '已复制 · 存成 .ics 后用' + (currentKind === 'event' ? '日历' : '提醒事项') + '打开' : '请手动长按文本框选择复制');
     }, 50);
   }
-
-  $('#btnExport').addEventListener('click', () => {
-    const r = buildICS();
-    if (!r.count) { toast('还没有可导出的排班'); return; }
-    exportIcs(r);
-  });
 
   $('#icsClose').addEventListener('click', closeSheets);
   $('#btnShareIcs').addEventListener('click', shareIcs);

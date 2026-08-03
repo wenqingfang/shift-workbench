@@ -124,8 +124,8 @@
         <span class="a-txt"><strong>导入排班</strong><small>文本 / 循环规则</small></span>
       </button>
       <button class="action glass" id="btnExport">
-        <span class="a-icon grad-ico">📅</span>
-        <span class="a-txt"><strong>导出到手机日历</strong><small>.ics 自动带闹钟提醒</small></span>
+        <span class="a-icon grad-ico">📝</span>
+        <span class="a-txt"><strong>导出到手机提醒</strong><small>日历 / 提醒事项均可</small></span>
       </button>
       <button class="action glass" id="btnTest">
         <span class="a-icon grad-ico">🔔</span>
@@ -204,7 +204,7 @@
         <div class="field">
           <label>使用说明</label>
           <div class="help">
-            <p><b>1 · 真正会响的闹钟靠这一步</b><br>排好班后点「导出到手机日历」，手机会弹出分享面板，选「日历」导入。每个班次自动带「提前 <span id="helpLead">60</span> 分钟」的系统提醒，锁屏也会响。<br>改了排班就重新导一次，同名事件会自动覆盖，不会重复。</p>
+            <p><b>1 · 真正会响的闹钟靠这一步</b><br>排好班后点「导出到手机提醒」，选「📝 提醒事项」导入（默认）。每个班次自动带「提前 <span id="helpLead">60</span> 分钟」的提醒；升级 iOS 26.2 后，把导入的提醒事项标记为「紧急」，会像闹钟一样响（静音/专注也响），最适合防睡过头。<br>也可切到「📅 日历」导入。改了排班重新导一次即可。</p>
             <p><b>2 · 把本页当 App 用</b><br>Android Chrome：菜单 → 添加到主屏幕。<br>iPhone Safari：分享 → 添加到主屏幕。<br>之后桌面会多一个图标，点开即用，不需要联网。</p>
             <p><b>3 · 连点模式</b><br>日历上方选一个班次后开启连点，点日期直接刷班，批量排班很快。</p>
             <p><b>4 · 换手机 / 清缓存前</b><br>先点「导出备份」存一份 JSON，新设备用「导入备份」还原，排班不会丢。</p>
@@ -299,11 +299,15 @@
 <div class="sheet glass tall" id="sheetIcs">
   <div class="sheet-handle"></div>
   <div class="sheet-head">
-    <h3>导出到手机日历 <span class="pill" id="icsCount">0 天</span></h3>
+    <h3>导出提醒 <span class="pill" id="icsCount">0 天</span></h3>
     <button class="ghost-btn" id="icsClose">关闭</button>
   </div>
   <div class="sheet-body">
-    <p class="hint" style="margin-bottom:12px">日历提醒每次只响一下（iOS 限制）。已开启「多次提醒」时会在到点前多次响铃；若仍怕睡过头，请在 iPhone 自带「时钟」App 另设一个同时间的闹钟（可自定义铃声、持续响）。</p>
+    <div class="seg-ctrl" id="icsKindSeg">
+      <button class="seg on" data-kind="todo">📝 提醒事项</button>
+      <button class="seg" data-kind="event">📅 日历</button>
+    </div>
+    <p class="hint" id="icsKindHint" style="margin-bottom:12px"></p>
     <div class="export-menu" id="exportMenu">
       <button class="btn-full grad" id="btnShareIcs">
         <span class="btn-icon">📤</span>用系统分享发送 .ics
