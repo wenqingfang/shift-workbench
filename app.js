@@ -848,6 +848,10 @@
         L.push('BEGIN:VTODO');
         L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
         L.push('DTSTAMP:' + icsStamp());
+        // 关键：iOS 提醒事项要靠 DTSTART 带具体时刻才会填充「日期与时间」，
+        // 否则只识别为"日期"、时间丢失；「紧急」开关就会兜底成"下一小时"。
+        // 这里 DTSTART 与 DUE 都用同一闹钟时间（上班前 lead 分钟），确保紧急按时响。
+        L.push('DTSTART;TZID=Asia/Shanghai:' + icsTime(due));
         L.push('DUE;TZID=Asia/Shanghai:' + icsTime(due));
         L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班 · 准备'));
         L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
@@ -919,7 +923,7 @@
     const cal = currentKind === 'event';
     $('#icsKindHint').textContent = cal
       ? '日历提醒每次只响一下（iOS 限制）。已开启「多次提醒」时会在到点前多次响铃；若仍怕睡过头，请在「时钟」App 另设同时间闹钟。'
-      : '提醒事项会在到点弹出通知；已设置高优先级方便查找。升级到 iOS 26.2 后，点该条 → 信息(i) → 打开「紧急」，会像闹钟一样响（静音/专注模式也响）。注意：「紧急」是智能列表，.ics 没有对应字段，导入时无法自动打开。';
+      : '提醒事项每条都带「具体日期＋时间」（＝你设置的提前量对应的闹钟时间）。升级 iOS 26.2 后点该条 → 信息(i) → 打开「紧急」，会像闹钟一样响（静音/专注模式也响），且默认就是你文件里的时间，不用手填。「紧急」开关 .ics 无法自动打开，需手动点一下。';
     $$('#icsKindSeg .seg').forEach((b) => b.classList.toggle('on', b.dataset.kind === currentKind));
     openSheet('#sheetIcs');
   }
