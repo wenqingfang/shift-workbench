@@ -1,4 +1,4 @@
-const CACHE = 'shift-workbench-v20';
+const CACHE = 'shift-workbench-v21';
 const SHELL = [
   './',
   './index.html',

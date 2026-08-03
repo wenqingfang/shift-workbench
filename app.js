@@ -941,7 +941,7 @@
     // iOS 通过 Share Sheet 把 .ics 导入提醒事项时，系统扩展通常只读第一条 VTODO；
     // 「文件」App 打开也可能只导入一条。这是 iOS 系统限制，不是文件问题。
     $('#icsMultiHint').textContent = r.count > 1
-      ? '⚠️ 你的文件里已包含 ' + r.count + ' 条提醒（每条日期/时间都正确），但 iOS 导入「提醒事项」时通常只认第一条。建议用「每天单独导出」逐个加入；或改用「设置 iPhone 系统闹钟」里的快捷指令一键添加全部日期。'
+      ? '⚠️ 你的文件里已包含 ' + r.count + ' 条提醒（每条日期/时间都正确），但 iOS 导入「提醒事项」时通常只认第一条。最省事的做法：去「设置 iPhone 提醒事项」点「⚡ 生成一键加提醒事项快捷指令」，一次把所有排班都加进提醒事项（带日期+时间+高优先级）。'
       : '';
     openSheet('#sheetIcs');
   }
@@ -1430,14 +1430,28 @@
   }
 
   function buildShortcutPlist() {
-    const items = upcomingAlarms(7);
+    // 遍历所有未来排班（不限天数），每条生成一个「添加提醒事项」动作，带完整日期+时间
+    const items = [];
+    const now = new Date();
+    Object.keys(S.schedule).sort().forEach((key) => {
+      const sh = shiftOf(key);
+      if (!sh || !sh.start) return;
+      const a = alarmAt(key, sh);
+      if (!a || a < now) return;
+      const d = parseYmd(key);
+      items.push({ key: key, date: d, shift: sh, time: a, start: startAt(key, sh) });
+    });
     if (!items.length) return null;
     const actions = items.map((it) => ({
-      WFWorkflowActionIdentifier: 'is.workflow.actions.alarm.create',
+      WFWorkflowActionIdentifier: 'is.workflow.actions.addnewreminder',
       WFWorkflowActionParameters: {
-        WFAlarmTime: hhmm(it.time),
-        WFLabel: it.shift.name + ' ' + it.shift.start + ' 上班 · ' + (it.date.getMonth() + 1) + '/' + it.date.getDate(),
-        WFSnooze: false
+        WFCalendarItemTitle: it.shift.name + ' ' + it.shift.start + ' 上班 · 准备',
+        WFCalendarItemNotes: '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成',
+        WFAlertEnabled: true,
+        WFAlertCondition: 'At Time',
+        WFAlertCustomTime: it.time,   // 完整 Date（含日期+时间），iOS 到点提醒
+        WFPriority: 'High',
+        WFFlag: false
       }
     }));
 
@@ -1453,7 +1467,7 @@
         WFWorkflowImportQuestions: [],
         WFWorkflowMinimumClientVersion: 900,
         WFWorkflowMinimumClientVersionString: '900',
-        WFWorkflowName: '班次闹钟',
+        WFWorkflowName: '班次提醒事项',
         WFWorkflowOutputContentItemClasses: [],
         WFWorkflowTypes: []
       }
@@ -1462,15 +1476,15 @@
 
   function downloadShortcut() {
     const plist = buildShortcutPlist();
-    if (!plist) { toast('还没有可生成的闹钟'); return; }
+    if (!plist) { toast('还没有可生成的提醒事项'); return; }
     const bytes = bytesBPList(plist);
     const blob = new Blob([bytes], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = '班次闹钟.shortcut';
+    a.href = url; a.download = '班次提醒事项.shortcut';
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-    toast('已下载 .shortcut · 用「文件」App 点开 → 分享到「快捷指令」运行');
+    toast('已下载 .shortcut · 用「文件」App 点开 → 分享到「快捷指令」运行，即可一次加入全部排班');
   }
 
   $('#btnShortcut').addEventListener('click', downloadShortcut);

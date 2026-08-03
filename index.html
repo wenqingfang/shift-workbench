@@ -133,7 +133,7 @@
       </button>
       <button class="action glass" id="btnClock">
         <span class="a-icon grad-ico">⏰</span>
-        <span class="a-txt"><strong>设置 iPhone 系统闹钟</strong><small>最可靠 · 可自定义铃声持续响</small></span>
+        <span class="a-txt"><strong>iPhone 提醒事项 / 闹钟</strong><small>一键快捷指令批量加提醒事项</small></span>
       </button>
     </section>
 
@@ -347,25 +347,25 @@
   </div>
 </div>
 
-<!-- ===== 抽屉：iPhone 系统闹钟清单 ===== -->
+<!-- ===== 抽屉：iPhone 提醒事项 / 系统闹钟 ===== -->
 <div class="sheet glass tall" id="sheetClock">
   <div class="sheet-handle"></div>
   <div class="sheet-head">
-    <h3>设置 iPhone 系统闹钟</h3>
+    <h3>iPhone 提醒事项 / 系统闹钟</h3>
     <button class="ghost-btn" id="clockClose">关闭</button>
   </div>
   <div class="sheet-body">
-    <p class="hint" style="margin-bottom:10px">网页闹钟在锁屏 / 退出后会被 iPhone 暂停，所以<strong>真正一直响、还能自定义铃声</strong>的是 iPhone 自带「时钟」App 的闹钟（系统级）。下面已按你的排班列好所有闹钟时间。</p>
+    <p class="hint" style="margin-bottom:10px">网页闹钟在锁屏 / 退出后会被 iPhone 暂停。最省事的一招：用快捷指令<strong>一次把所有排班加进「提醒事项」</strong>（带日期+时间+高优先级），升级 iOS 26.2 后把每条开成「紧急」，就会像闹钟一样响。下面也保留「时钟」App 系统闹钟兜底。</p>
+    <button class="btn-full grad" id="btnShortcut" style="margin-bottom:12px">
+      <span class="btn-icon">⚡</span>生成一键加提醒事项快捷指令
+      <small>下载 .shortcut → 分享到「快捷指令」运行，全部排班一次加好</small>
+    </button>
     <div class="btn-row" style="margin-bottom:12px">
       <button class="btn-full grad" id="btnCopyClock" style="flex:1">📋 复制闹钟清单</button>
       <button class="btn-full" id="btnOpenClock" style="flex:1">⏰ 打开时钟 App</button>
     </div>
-    <button class="btn-full grad" id="btnShortcut" style="margin-bottom:12px">
-      <span class="btn-icon">⚡</span>生成一键加闹钟快捷指令
-      <small>下载 .shortcut 后分享到「快捷指令」App 运行</small>
-    </button>
     <div class="clock-list" id="clockList"></div>
-    <p class="hint" style="margin-top:12px"><strong>关于快捷指令的限制：</strong>iOS「创建闹钟」动作只能填时间、不能指定具体日期，所以运行一次会把未来几天的闹钟时间都加进「时钟」（建议每周/每晚运行一次，过期手动关）。如果嫌麻烦，直接复制上面清单逐个加最稳。</p>
+    <p class="hint" style="margin-top:12px"><strong>关于快捷指令：</strong>「添加提醒事项」动作支持具体日期+时间，运行一次就把你所有未来排班都加进提醒事项（不用每天单独弄）。唯一遗憾是 iOS 快捷指令目前还不能自动勾「紧急」开关，加完后你只需在提醒事项 App 里把每条点开「信息(i)」打开紧急即可——日期和时间已经自动填对了。</p>
   </div>
 </div>
 
