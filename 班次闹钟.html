@@ -2029,24 +2029,21 @@ window.__SINGLE_FILE__ = true;
      iPhone 直接导入 .ics 到「提醒事项」通常只能得到一条，或只把文件当附件（截图就是）。
      真正能一次创建 N 条提醒事项的方法是：在「快捷指令」App 里建一个简单捷径，
      读取我们生成的文本清单，循环「添加提醒事项」。这里生成该清单。
-     每行格式：YYYY-MM-DD HH:MM\t标题\t备注（Tab 分隔），方便 shortcuts 按 Tab 拆分。
+     每行格式：YYYY/MM/DD HH:MM\t标题\t备注（Tab 分隔），方便 shortcuts 按 Tab 拆分。
+     注意：和网页闹钟清单共用 upcomingAlarms() 数据源，保证网页看到几条，剪贴板就几条。
    */
   const BATCH_SHORTCUT_NAME = '批量添加排班提醒';
   function buildRemindersList() {
     const lines = [];
-    const now = new Date();
-    Object.keys(S.schedule).sort().forEach((key) => {
-      const sh = shiftOf(key);
-      if (!sh || !sh.start) return;
-      const a = alarmAt(key, sh);
-      if (!a || a < now) return;
+    upcomingAlarms(30).forEach((it) => {
+      const a = it.time;
       const y = a.getFullYear();
       const m = pad(a.getMonth() + 1);
       const d = pad(a.getDate());
       const hh = pad(a.getHours());
       const mm = pad(a.getMinutes());
       const datetime = y + '/' + m + '/' + d + ' ' + hh + ':' + mm; // iOS 中文系统最容易识别的日期时间格式
-      const title = sh.name + ' ' + sh.start + ' 上班 · 准备';
+      const title = it.shift.name + ' ' + it.shift.start + ' 上班 · 准备';
       const note = '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成';
       lines.push([datetime, title, note].join('\t'));
     });
