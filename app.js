@@ -1272,7 +1272,7 @@
       const d = pad(a.getDate());
       const hh = pad(a.getHours());
       const mm = pad(a.getMinutes());
-      const datetime = y + '-' + m + '-' + d + 'T' + hh + ':' + mm + ':00'; // ISO 8601，Shortcuts「日期」动作可直接解析为本地时间
+      const datetime = y + '/' + m + '/' + d + ' ' + hh + ':' + mm; // iOS 中文系统最容易识别的日期时间格式
       const title = sh.name + ' ' + sh.start + ' 上班 · 准备';
       const note = '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成';
       lines.push([datetime, title, note].join('\t'));
