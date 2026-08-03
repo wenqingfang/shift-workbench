@@ -812,17 +812,12 @@
     while (rest.length) { out += '\r\n ' + rest.slice(0, 73); rest = rest.slice(73); }
     return out;
   }
-  function buildICS(kind) {
-    kind = kind || 'todo';
+  // 只生成「提醒事项」(VTODO)。日历(VEVENT)通道已移除。
+  function buildICS() {
     const L = [
       'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ShiftWorkbench//CN', 'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
-      kind === 'todo' ? 'X-WR-CALNAME:我的排班提醒' : 'X-WR-CALNAME:我的排班闹钟',
-      'X-WR-TIMEZONE:Asia/Shanghai',
-      'BEGIN:VTIMEZONE', 'TZID:Asia/Shanghai',
-      'BEGIN:STANDARD', 'DTSTART:19700101T000000',
-      'TZOFFSETFROM:+0800', 'TZOFFSETTO:+0800', 'TZNAME:CST',
-      'END:STANDARD', 'END:VTIMEZONE'
+      'X-WR-CALNAME:我的排班提醒'
     ];
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
@@ -833,109 +828,125 @@
       const d = parseYmd(key);
       if (d < from) return;
       const st = startAt(key, sh);
-      let en;
-      if (sh.end) {
-        const t = sh.end.split(':');
-        en = parseYmd(key); en.setHours(+t[0], +t[1], 0, 0);
-        if (en <= st) en = new Date(en.getTime() + 86400000);
-      } else {
-        en = new Date(st.getTime() + 4 * 3600000);
-      }
       count++;
-      if (kind === 'todo') {
-        /* ---- 提醒事项（VTODO）---- */
-        const due = sh.alarm ? alarmAt(key, sh) : st;   // 到期 = 闹钟时间（提前 lead 分钟）
-        L.push('BEGIN:VTODO');
-        L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
-        L.push('DTSTAMP:' + icsStamp());
-        // 关键：iOS 提醒事项对 DTSTART;TZID=... 的解析很差，经常丢掉时间、只认日期，
-        // 导致「紧急」开关兜底成"下一小时"。实测用 floating time（去掉 TZID）能被正确识别。
-        // 这里 DTSTART 与 DUE 都用同一闹钟时间（上班前 lead 分钟），确保紧急按时响。
-        const dueStamp = icsTime(due);
-        L.push('DTSTART:' + dueStamp);
-        L.push('DUE:' + dueStamp);
-        L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班 · 准备'));
-        L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
-        L.push('PRIORITY:1');
-        L.push('STATUS:NEEDS-ACTION');
-        // 主提醒：到期即响
-        L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
-        L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
-        L.push('TRIGGER:PT0M'); L.push('END:VALARM');
-        // 多重阶梯提醒：到点前多次（落在 alarm→start 之间）
-        if (sh.alarm && S.multiAlarm !== false) {
-          [30, 15, 5].forEach((m) => {
-            const off = S.leadMinutes - m;          // 相对到期的正向偏移，使提醒落在上班前 m 分钟
-            if (off > 0) {
-              L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
-              L.push(fold('DESCRIPTION:还有 ' + m + ' 分钟 · ' + sh.name + ' ' + sh.start));
-              L.push('TRIGGER:PT' + off + 'M'); L.push('END:VALARM');
-            }
-          });
-        }
-        L.push('END:VTODO');
-      } else {
-        /* ---- 日历（VEVENT）---- */
-        L.push('BEGIN:VEVENT');
-        L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
-        L.push('DTSTAMP:' + icsStamp());
-        L.push('DTSTART;TZID=Asia/Shanghai:' + icsTime(st));
-        L.push('DTEND;TZID=Asia/Shanghai:' + icsTime(en));
-        L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班'));
-        L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
-        if (sh.alarm) {
-          // 多重阶梯提醒：主提醒 + 到点前更临近的几次，避免只响一次睡过头
-          const leads = [S.leadMinutes];
-          if (S.multiAlarm !== false) {
-            [30, 15, 5].forEach((m) => { if (m < S.leadMinutes && leads.indexOf(m) < 0) leads.push(m); });
+      /* ---- 提醒事项（VTODO）---- */
+      const due = sh.alarm ? alarmAt(key, sh) : st;   // 到期 = 闹钟时间（提前 lead 分钟）
+      L.push('BEGIN:VTODO');
+      L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
+      L.push('DTSTAMP:' + icsStamp());
+      // 关键：iOS 提醒事项对 DTSTART;TZID=... 的解析很差，经常丢掉时间、只认日期，
+      // 导致「紧急」开关兜底成"下一小时"。实测用 floating time（去掉 TZID）能被正确识别。
+      // DTSTART 与 DUE 都用同一闹钟时间（上班前 lead 分钟），确保紧急按时响。
+      const dueStamp = icsTime(due);
+      L.push('DTSTART:' + dueStamp);
+      L.push('DUE:' + dueStamp);
+      L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班 · 准备'));
+      L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
+      L.push('PRIORITY:1');
+      L.push('STATUS:NEEDS-ACTION');
+      // 主提醒：到期即响
+      L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
+      L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
+      L.push('TRIGGER:PT0M'); L.push('END:VALARM');
+      // 多重阶梯提醒：到点前多次（落在 alarm→start 之间）
+      if (sh.alarm && S.multiAlarm !== false) {
+        [30, 15, 5].forEach((m) => {
+          const off = S.leadMinutes - m;          // 相对到期的正向偏移，使提醒落在上班前 m 分钟
+          if (off > 0) {
+            L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
+            L.push(fold('DESCRIPTION:还有 ' + m + ' 分钟 · ' + sh.name + ' ' + sh.start));
+            L.push('TRIGGER:PT' + off + 'M'); L.push('END:VALARM');
           }
-          leads.sort((a, b) => b - a); // 由早到晚
-          leads.forEach((m) => {
-            L.push('BEGIN:VALARM');
-            L.push('ACTION:DISPLAY');
-            L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
-            L.push('TRIGGER:-PT' + m + 'M');
-            L.push('END:VALARM');
-          });
-        }
-        L.push('END:VEVENT');
+        });
       }
+      L.push('END:VTODO');
     });
     L.push('END:VCALENDAR');
     return { text: L.join('\r\n'), count: count };
   }
-  /* ================= 导出：日历 / 提醒事项（.ics 通用，组件不同） ================= */
+
+  // 生成单天的 .ics（仅一条 VTODO）。iOS 导入「提醒事项」通常只认第一条 VTODO，
+  // 所以提供「每天单独导出」：把每天拆成独立文件，用户逐个加入，保证每天都有正确时间。
+  function buildOneICS(key, sh) {
+    const L = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ShiftWorkbench//CN', 'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:我的排班提醒'
+    ];
+    const st = startAt(key, sh);
+    const due = sh.alarm ? alarmAt(key, sh) : st;
+    L.push('BEGIN:VTODO');
+    L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
+    L.push('DTSTAMP:' + icsStamp());
+    const dueStamp = icsTime(due);
+    L.push('DTSTART:' + dueStamp);
+    L.push('DUE:' + dueStamp);
+    L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班 · 准备'));
+    L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
+    L.push('PRIORITY:1');
+    L.push('STATUS:NEEDS-ACTION');
+    L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
+    L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
+    L.push('TRIGGER:PT0M'); L.push('END:VALARM');
+    if (sh.alarm && S.multiAlarm !== false) {
+      [30, 15, 5].forEach((m) => {
+        const off = S.leadMinutes - m;
+        if (off > 0) {
+          L.push('BEGIN:VALARM'); L.push('ACTION:DISPLAY');
+          L.push(fold('DESCRIPTION:还有 ' + m + ' 分钟 · ' + sh.name + ' ' + sh.start));
+          L.push('TRIGGER:PT' + off + 'M'); L.push('END:VALARM');
+        }
+      });
+    }
+    L.push('END:VTODO');
+    L.push('END:VCALENDAR');
+    return L.join('\r\n');
+  }
+
+  function shareEachDay() {
+    if (!navigator.share || !window.File) { toast('当前环境不支持系统分享'); return; }
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+    const files = [];
+    Object.keys(S.schedule).sort().forEach((key) => {
+      const sh = shiftOf(key);
+      if (!sh || !sh.start) return;
+      const d = parseYmd(key);
+      if (d < from) return;
+      files.push(new File([buildOneICS(key, sh)], '排班-' + key + '.ics', { type: ICS_TYPE }));
+    });
+    if (!files.length) { toast('还没有可导出的排班'); return; }
+    navigator.share({ files: files, title: '逐日排班提醒' })
+      .then(() => toast(files.length > 1 ? '逐个选「提醒事项」导入即可' : '请选「提醒事项」导入'))
+      .catch((err) => { if (err && err.name !== 'AbortError') toast('分享失败，请换其他方式'); });
+  }
+
+  /* ================= 导出：提醒事项（.ics / VTODO） ================= */
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const ICS_FILE = '我的排班闹钟.ics';
   const ICS_TYPE = 'text/calendar';
   let currentIcs = null;     // 当前打开导出菜单时对应的 ICS 数据
-  let currentKind = 'todo';  // 'todo'=提醒事项, 'event'=日历
 
-  function exportIcs(kind) {
-    currentKind = kind || 'todo';
-    const r = buildICS(currentKind);
+  function exportIcs() {
+    const r = buildICS();
     if (!r.count) { toast('还没有可导出的排班'); return; }
     currentIcs = r;
     $('#icsCount').textContent = r.count + ' 天';
     $('#icsText').value = r.text;
     $('#exportMenu').hidden = false;
     $('#copyArea').hidden = true;
-    const cal = currentKind === 'event';
-    $('#icsKindHint').textContent = cal
-      ? '日历提醒每次只响一下（iOS 限制）。已开启「多次提醒」时会在到点前多次响铃；若仍怕睡过头，请在「时钟」App 另设同时间闹钟。'
-      : '提醒事项每条都带「具体日期＋时间」（＝你设置的提前量对应的闹钟时间）。升级 iOS 26.2 后点该条 → 信息(i) → 打开「紧急」，会像闹钟一样响（静音/专注模式也响），且默认就是你文件里的时间，不用手填。「紧急」开关 .ics 无法自动打开，需手动点一下。';
-    // iOS 通过 Share Sheet 把 .ics 导入提醒事项时，系统扩展经常只读第一条 VTODO，
-    // 所以多条排班建议用「保存到文件」→「文件」App 中打开导入；若仍只有一条，改用「日历」或「快捷指令」最稳。
-    $('#icsMultiHint').textContent = !cal && currentIcs && currentIcs.count > 1
-      ? '⚠️ iOS 分享导入提醒事项时经常只导入第一条（系统限制）。想一次导入多天，请优先用「保存到文件」方式；如果仍然只出现一条，建议切到「日历」导入，或用「设置 iPhone 系统闹钟」里的快捷指令一键添加。'
+    $('#icsKindHint').textContent =
+      '提醒事项每条都带「具体日期＋时间」（＝你设置的提前量对应的闹钟时间）。升级 iOS 26.2 后点该条 → 信息(i) → 打开「紧急」，会像闹钟一样响（静音/专注模式也响），且默认就是你文件里的时间，不用手填。「紧急」开关 .ics 无法自动打开，需手动点一下。';
+    // iOS 通过 Share Sheet 把 .ics 导入提醒事项时，系统扩展通常只读第一条 VTODO；
+    // 「文件」App 打开也可能只导入一条。这是 iOS 系统限制，不是文件问题。
+    $('#icsMultiHint').textContent = r.count > 1
+      ? '⚠️ 你的文件里已包含 ' + r.count + ' 条提醒（每条日期/时间都正确），但 iOS 导入「提醒事项」时通常只认第一条。建议用「每天单独导出」逐个加入；或改用「设置 iPhone 系统闹钟」里的快捷指令一键添加全部日期。'
       : '';
-    $$('#icsKindSeg .seg').forEach((b) => b.classList.toggle('on', b.dataset.kind === currentKind));
     openSheet('#sheetIcs');
   }
 
-  $('#btnExport').addEventListener('click', () => exportIcs(currentKind));
-  $$('#icsKindSeg .seg').forEach((b) => b.addEventListener('click', () => exportIcs(b.dataset.kind)));
+  $('#btnExport').addEventListener('click', () => exportIcs());
 
   // 1) Web Share 文件分享
   function shareIcs() {
@@ -945,7 +956,7 @@
     try {
       const file = new File([r.text], ICS_FILE, { type: ICS_TYPE });
       navigator.share({ files: [file], title: '我的排班提醒' })
-        .then(() => toast(currentKind === 'event' ? '请选择「日历」导入' : '请选择「提醒事项」导入'))
+        .then(() => toast('请选择「提醒事项」导入'))
         .catch((err) => {
           if (err && err.name === 'AbortError') return;
           toast('分享失败，请换其他方式');
@@ -976,7 +987,7 @@
       a.href = uri; a.target = '_blank';
       document.body.appendChild(a); a.click();
       setTimeout(() => a.remove(), 500);
-      toast(currentKind === 'event' ? '请在弹窗选择「日历」导入' : '请在弹窗选择「提醒事项」导入');
+      toast('请在弹窗选择「提醒事项」导入');
     } catch (e) {
       toast('无法直接打开，请用「保存到文件」方式');
     }
@@ -994,7 +1005,7 @@
       a.href = url; a.download = ICS_FILE;
       document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-      toast('已保存 · 在「文件」App 点击该 .ics 即可导入' + (currentKind === 'event' ? '日历' : '提醒事项'));
+      toast('已保存 · 在「文件」App 点击该 .ics 即可导入提醒事项');
     } catch (e) {
       toast('当前环境不支持下载，请复制全文');
     }
@@ -1016,11 +1027,11 @@
       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
       if (!ok && navigator.clipboard) {
         navigator.clipboard.writeText(ta.value)
-          .then(() => toast('已复制 · 存成 .ics 后用' + (currentKind === 'event' ? '日历' : '提醒事项') + '打开'))
+          .then(() => toast('已复制 · 存成 .ics 后用「提醒事项」打开'))
           .catch(() => toast('请手动长按文本框选择复制'));
         return;
       }
-      toast(ok ? '已复制 · 存成 .ics 后用' + (currentKind === 'event' ? '日历' : '提醒事项') + '打开' : '请手动长按文本框选择复制');
+      toast(ok ? '已复制 · 存成 .ics 后用「提醒事项」打开' : '请手动长按文本框选择复制');
     }, 50);
   }
 
@@ -1029,6 +1040,7 @@
   $('#btnOpenIcs').addEventListener('click', openIcsInCalendar);
   $('#btnSaveIcs').addEventListener('click', saveIcsToFiles);
   $('#btnCopyIcs').addEventListener('click', copyIcs);
+  $('#btnShareEach').addEventListener('click', shareEachDay);
   $('#btnBackToMenu').addEventListener('click', () => {
     $('#exportMenu').hidden = false;
     $('#copyArea').hidden = true;

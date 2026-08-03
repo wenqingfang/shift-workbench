@@ -303,10 +303,6 @@
     <button class="ghost-btn" id="icsClose">关闭</button>
   </div>
   <div class="sheet-body">
-    <div class="seg-ctrl" id="icsKindSeg">
-      <button class="seg on" data-kind="todo">📝 提醒事项</button>
-      <button class="seg" data-kind="event">📅 日历</button>
-    </div>
     <p class="hint" id="icsKindHint" style="margin-bottom:12px"></p>
     <p class="hint" id="icsMultiHint" style="margin-bottom:12px;color:#ffd36a"></p>
     <details class="hint-box" id="urgentGuide" style="margin-bottom:12px">
@@ -316,6 +312,7 @@
         <li>找到刚导入的提醒（可按日期搜索），点进去。</li>
         <li>点右上角的 <strong>信息(i)</strong>。</li>
         <li>在「日期与時間」下方，打开 <strong>紧急</strong> 开关。</li>
+        <li>打开后看一眼「日期与時間」——它应<strong>自动等于你导出的排班时间</strong>（如 08:00 班、提前 60 分就显示 07:00），<strong>不用手动改</strong>。若显示成"今天 11:00"之类，说明时间没带进去，请用「每天单独导出」重导。</li>
         <li>返回；该条会出现在首页的「紧急」智能列表里，到点会像闹钟一样响。</li>
       </ol>
       <p style="margin:8px 0 0 18px;font-size:12px;opacity:.8">注：「紧急」是智能列表，不是普通列表，.ics 文件没有对应字段，所以导入时没法自动打开，必须手动开。已设置高优先级(PRIORITY:1)方便你找到它。</p>
@@ -323,15 +320,19 @@
     <div class="export-menu" id="exportMenu">
       <button class="btn-full grad" id="btnShareIcs">
         <span class="btn-icon">📤</span>用系统分享发送 .ics
-        <small>推荐：iOS 可能直接显示「日历」</small>
+        <small>推荐：选「提醒事项」导入</small>
       </button>
       <button class="btn-full" id="btnOpenIcs">
-        <span class="btn-icon">📅</span>在日历 App 中打开
-        <small>Safari 会询问是否导入</small>
+        <span class="btn-icon">📝</span>在「提醒事项」中打开
+        <small>Safari 会询问是否导入提醒</small>
       </button>
       <button class="btn-full" id="btnSaveIcs">
         <span class="btn-icon">💾</span>保存到「文件」App
         <small>保存后在文件 App 中点击 .ics 导入</small>
+      </button>
+      <button class="btn-full grad" id="btnShareEach">
+        <span class="btn-icon">📅</span>每天单独导出（绕过 iOS 只导一条）
+        <small>每天一个 .ics，逐个加入「提醒事项」</small>
       </button>
       <button class="btn-full" id="btnCopyIcs">
         <span class="btn-icon">📋</span>复制全部内容
@@ -339,7 +340,7 @@
       </button>
     </div>
     <div class="copy-area" id="copyArea" hidden>
-      <p class="hint">已复制到剪贴板。在备忘录中新建文件并粘贴，保存为 <b>排班.ics</b>，再用日历 App 打开即可。</p>
+      <p class="hint">已复制到剪贴板。在备忘录中新建文件并粘贴，保存为 <b>排班.ics</b>，再用「提醒事项」App 打开即可。</p>
       <textarea id="icsText" rows="8" readonly></textarea>
       <button class="btn-full" id="btnBackToMenu">返回导出菜单</button>
     </div>
