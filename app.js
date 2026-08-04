@@ -1270,7 +1270,7 @@
       const hh = pad(a.getHours());
       const mm = pad(a.getMinutes());
       const datetime = y + '/' + m + '/' + d + ' ' + hh + ':' + mm; // iOS 中文系统最容易识别的日期时间格式
-      const title = '班次闹钟 | ' + it.shift.name + ' ' + it.shift.start + ' 上班 · 准备';
+      const title = '【班次闹钟】' + it.shift.name + ' ' + it.shift.start + ' 上班 · 准备';
       const note = '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成';
       lines.push([datetime, title, note].join(' | '));
     });

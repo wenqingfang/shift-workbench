@@ -372,8 +372,8 @@
       <ol style="margin:8px 0 0 18px;line-height:1.7;font-size:13px">
         <li>打开 iPhone「快捷指令」App → 点右上角 <strong>+</strong> 新建快捷指令。</li>
         <li>搜索框搜 <strong>「剪贴板」</strong> → 添加动作 <strong>获取剪贴板</strong>。</li>
-        <li>搜索框搜 <strong>「提醒事项」</strong> → 添加 <strong>查找提醒事项</strong>：过滤器设「标题」「包含」「班次闹钟 |」（这串前缀每条都带，用来精准识别本工具生成的提醒）；列表选你存提醒的列表（一般默认"提醒事项"即可）。</li>
-        <li>搜索框搜 <strong>「删除」</strong> → 添加 <strong>删除提醒事项</strong>：输入选上一步的<strong>查找结果</strong>。<div style="margin:6px 0 6px 0;padding:8px 10px;border-left:3px solid #ff8a8a;background:rgba(255,138,138,.08);border-radius:6px;font-size:12px">⚠️ 这步会把所有标题带「班次闹钟 |」的旧提醒清掉（包括你之前手动开过「紧急」的）。因为每次运行捷径都是「先清空旧的、再添加最新」，所以<strong>重复运行不会越加越多</strong>。运行后记得重新给需要的条目开「紧急」。</div></li>
+        <li>搜索框搜 <strong>「提醒事项」</strong> → 添加 <strong>查找提醒事项</strong>：过滤器设「标题」「包含」「【班次闹钟】」（这串前缀每条都带，用来精准识别本工具生成的提醒）；<strong>不要给这个动作接任何输入</strong>，让它直接查系统提醒事项。</li>
+        <li>搜索框搜 <strong>「删除」</strong> → 添加 <strong>删除提醒事项</strong>：输入选上一步的<strong>查找结果</strong>。<div style="margin:6px 0 6px 0;padding:8px 10px;border-left:3px solid #ff8a8a;background:rgba(255,138,138,.08);border-radius:6px;font-size:12px">⚠️ 这步会把所有标题带「【班次闹钟】」的旧提醒清掉（包括你之前手动开过「紧急」的）。因为每次运行捷径都是「先清空旧的、再添加最新」，所以<strong>重复运行不会越加越多</strong>。运行后记得重新给需要的条目开「紧急」。</div></li>
         <li>搜索框搜 <strong>「拆分」</strong> → 添加 <strong>拆分文本</strong>：文本选上一步的<strong>剪贴板</strong>；分隔符选 <strong>新行</strong>。</li>
         <li>搜索框搜 <strong>「重复」</strong> → 添加 <strong>针对每一项重复</strong>：输入选上一步的<strong>拆分结果</strong>。</li>
         <li>在循环里，搜索框搜 <strong>「拆分」</strong> → 加 <strong>拆分文本</strong>：文本选魔法变量 <strong>重复项目</strong>；分隔符选 <strong>自定义，输入一个竖线 |</strong>（就是网页清单里用的那个分隔符）。</li>
