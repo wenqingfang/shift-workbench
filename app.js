@@ -1149,10 +1149,22 @@
      真正能一次创建 N 条提醒事项的方法是：在「快捷指令」App 里建一个简单捷径，
      读取我们生成的文本清单，循环「添加提醒事项」。这里生成该清单。
      每行格式：YYYY/MM/DD HH:MM | 标题 | 备注（| 竖线分隔，iOS 26 没有制表符预设，用竖线最好输入）。
+     标题前缀带上班表名：【班次闹钟·<班表名>】班次 08:00 上班 · 准备
+     —— 多套班表互不误删的关键：捷径只删除「当前班表前缀」的旧提醒，再添加本次清单。
      注意：和网页闹钟清单共用 upcomingAlarms() 数据源，保证网页看到几条，剪贴板就几条。
    */
   const BATCH_SHORTCUT_NAME = '批量添加排班提醒';
+
+  // 当前激活班表名（已清洗，安全用于标题前缀）
+  function activeProfileTag() {
+    let n = '本班';
+    if (S.profiles && S.profiles[S.activeProfile]) n = S.profiles[S.activeProfile].name || n;
+    n = (n || '').replace(/[【】|]/g, '').trim().slice(0, 10) || '本班';
+    return n;
+  }
+
   function buildRemindersList() {
+    const prefix = '【班次闹钟·' + activeProfileTag() + '】';
     const lines = [];
     upcomingAlarms(30).forEach((it) => {
       const a = it.time;
@@ -1162,8 +1174,8 @@
       const hh = pad(a.getHours());
       const mm = pad(a.getMinutes());
       const datetime = y + '/' + m + '/' + d + ' ' + hh + ':' + mm; // iOS 中文系统最容易识别的日期时间格式
-      const title = '【班次闹钟】' + it.shift.name + ' ' + it.shift.start + ' 上班 · 准备';
-      const note = '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成';
+      const title = prefix + it.shift.name + ' ' + it.shift.start + ' 上班 · 准备';
+      const note = '提前 ' + S.leadMinutes + ' 分钟提醒 · 由班次闹钟工作台生成（班表：' + activeProfileTag() + '）';
       lines.push([datetime, title, note].join(' | '));
     });
     return lines.join('\n');

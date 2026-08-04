@@ -262,6 +262,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
   padding:12px;border-radius:var(--r-sm);background:rgba(255,255,255,.045)}
 .help b{color:var(--txt)}
 
+/* 捷径改法可折叠说明 */
+.shortcut-help{font-size:12px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);padding:10px 12px;background:rgba(255,255,255,.04)}
+.shortcut-help summary{list-style:none;outline:none;color:var(--txt);cursor:pointer;font-weight:600}
+.shortcut-help summary::-webkit-details-marker{display:none}
+.shortcut-help[open] summary{margin-bottom:8px}
+.sh-body{display:flex;flex-direction:column;gap:8px;color:var(--txt-faint);line-height:1.6}
+.sh-body ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.sh-body code{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:1px 5px;font-size:11px;color:#ffd98a;word-break:break-all}
+[data-mode="light"] .sh-body code{background:rgba(0,0,0,.06);color:#9a5b00}
+[data-mode="light"] .shortcut-help{border-color:rgba(0,0,0,.12)}
+
 /* 开关 / 下拉 */
 .hint-inline{font-size:11.5px;color:var(--txt-faint);line-height:1.5;flex:1}
 .switch{position:relative;display:inline-block;width:46px;height:26px;flex:0 0 auto}
