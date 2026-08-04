@@ -249,7 +249,7 @@ textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
 .seq-i{font-size:11.5px;padding:4px 9px;border-radius:8px;color:#fff}
 #fileInput{display:none}
 .preview{margin-top:6px;display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.09)}
-.preview[hidden],.preview.hidden{display:none}
+.preview[hidden],.preview.hidden{display:none !important}
 .prev-head{display:flex;justify-content:space-between;font-size:13px;color:var(--txt-dim)}
 .prev-list{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
 .pv{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.05)}

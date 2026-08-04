@@ -28,6 +28,8 @@
   let paintShift = null;           // 连点模式选中的班次
   let pendingImport = null;        // 待确认导入的数据
   let cycleSeq = [];               // 循环规则序列
+  let importBuffer = null;         // 导入预览缓冲区
+  let importPreviewMode = null;    // 当前预览模式
   let alarmTimer = null;
   let audioCtx = null;
   let ringTimer = null;
@@ -712,14 +714,12 @@
     cycleSeq = []; renderCycSeq();
     importBuffer = []; importPreviewMode = null; pendingImport = null;
     const pv = $('#importPreview');
-    if (pv && !pv.hidden) {
+    if (pv) {
       pv.hidden = true;
       $('#prevList').innerHTML = '';
       $('#prevCount').textContent = '0 天';
-      toast('已清空循环顺序和预览');
-    } else {
-      toast('已清空循环顺序');
     }
+    toast('已清空循环顺序和预览');
   });
   $('#btnCycGen').addEventListener('click', () => {
     if (!cycleSeq.length) { toast('先添加循环顺序'); return; }
