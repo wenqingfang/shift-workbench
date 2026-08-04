@@ -410,6 +410,46 @@ textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
 /* ===== 班次克隆 ===== */
 .se .clone{color:#9ae7ff;font-size:15px;padding:0 4px;flex:0 0 auto}
 
+/* ===== 多套班表 ===== */
+.profile-bar{display:flex;align-items:center;gap:8px;padding:2px}
+.profile-label{font-size:12px;color:var(--txt-faint);flex:0 0 auto;letter-spacing:.5px}
+.profile-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.profile-chips::-webkit-scrollbar{display:none}
+.pchip{flex:0 0 auto;font-size:12.5px;padding:7px 13px;border-radius:999px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.1);color:var(--txt-dim);white-space:nowrap;transition:.15s}
+.pchip.on{color:#fff;border-color:transparent;background:var(--grad);box-shadow:0 5px 16px rgba(124,92,255,.35)}
+.profile-btn{flex:0 0 auto;width:32px;height:32px;border-radius:50%;font-size:16px;color:var(--txt-dim);
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);display:grid;place-items:center}
+.profile-btn:active{transform:scale(.92)}
+
+/* 本月统计 */
+.stat-box{display:flex;flex-direction:column;gap:12px}
+.stat-top{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat-cell{border-radius:var(--r-md);padding:12px 8px;text-align:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.stat-cell b{display:block;font-size:22px;font-weight:700;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.stat-cell span{font-size:11px;color:var(--txt-dim);margin-top:2px;display:block}
+.stat-break{display:flex;flex-wrap:wrap;gap:8px}
+.stat-b{display:flex;align-items:center;gap:7px;font-size:13px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.stat-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.stat-n{color:var(--txt)}
+.stat-c{color:var(--txt-dim);font-size:12px}
+
+/* 班表管理列表 */
+.profile-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.prow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;border-radius:var(--r-sm);
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.prow.on{border-color:rgba(124,92,255,.5)}
+.pname{font-size:14px;color:var(--txt)}
+.pname small{color:var(--txt-faint);font-size:11px;margin-left:4px}
+.pctrl{display:flex;gap:6px;flex:0 0 auto}
+.pctrl button{font-size:12px;padding:6px 10px;border-radius:9px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--txt-dim)}
+.pctrl .pdel{color:#ff7b93;border-color:rgba(255,123,147,.25)}
+.pctrl .pswitch{color:#9ae7ff}
+
+/* 浅色模式补充 */
+[data-mode="light"] .pchip{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.08);color:var(--txt-dim)}
+[data-mode="light"] .stat-cell,.stat-b,.prow{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
+
 </style>
 <script>
 window.__SINGLE_FILE__ = true;
@@ -498,6 +538,13 @@ window.__SINGLE_FILE__ = true;
 
   <!-- ===================== 排班 ===================== -->
   <section class="view" id="view-schedule">
+    <div class="profile-bar">
+      <span class="profile-label">班表</span>
+      <div class="profile-chips" id="profileChips"></div>
+      <button class="profile-btn" id="btnAddProfile" title="新增班表">＋</button>
+      <button class="profile-btn" id="btnManageProfile" title="管理班表">⚙</button>
+    </div>
+
     <section class="card glass">
       <div class="cal-head">
         <button class="nav-btn" id="prevMonth" aria-label="上个月">‹</button>
@@ -527,6 +574,18 @@ window.__SINGLE_FILE__ = true;
         <span class="pill" id="alarmCount">0</span>
       </div>
       <div class="alarm-list" id="alarmList"></div>
+    </section>
+
+    <section class="card glass">
+      <div class="card-head">
+        <h2>本月统计</h2>
+        <span class="pill" id="statMonth">--</span>
+      </div>
+      <div id="statBox" class="stat-box"></div>
+      <button class="btn-full grad" id="btnWeekImg" style="margin-top:14px">
+        <span class="btn-icon">🖼️</span>导出本周排班图片
+        <small>生成好看的周报，直接发班组群</small>
+      </button>
     </section>
 
     <div class="mini-actions">
@@ -622,6 +681,7 @@ window.__SINGLE_FILE__ = true;
             <p><b>1 · 把本页当 App 用</b><br>iPhone Safari：分享 → 添加到主屏幕。<br>之后桌面会多一个图标，点开即用，不需要联网。</p>
             <p><b>2 · 连点模式</b><br>日历上方选一个班次后开启连点，点日期直接刷班，批量排班很快。</p>
             <p><b>3 · 换手机 / 清缓存前</b><br>先点「导出备份」存一份 JSON，新设备用「导入备份」还原，排班不会丢。</p>
+            <p><b>4 · 多套班表</b><br>排班页顶部「班表」可切换本班 / 替班 / 培训等多套排班；点 ＋ 新建、⚙ 管理（改名 / 删除）。每套独立保存，互不干扰。</p>
           </div>
         </div>
 
@@ -739,6 +799,19 @@ window.__SINGLE_FILE__ = true;
   </div>
 </div>
 
+<!-- ===== 抽屉：管理班表 ===== -->
+<div class="sheet glass" id="sheetProfiles">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <h3>管理班表</h3>
+    <button class="ghost-btn" id="profilesClose">关闭</button>
+  </div>
+  <div class="sheet-body">
+    <p class="hint">切换 / 改名 / 删除班表。每个班表独立保存排班，互不影响；排班、闹钟、统计都按当前班表计算。</p>
+    <div id="profileList" class="profile-list"></div>
+  </div>
+</div>
+
 <!-- ===== 闹钟弹层 ===== -->
 <div class="alarm-overlay" id="alarmOverlay">
   <div class="alarm-box glass">
@@ -778,11 +851,14 @@ window.__SINGLE_FILE__ = true;
       { id: 'night', name: '晚班',   start: '18:00', end: '22:00', color: '#22d3ee', alarm: true },
       { id: 'off',   name: '休息',   start: '',      end: '',      color: '#3f4460', alarm: false }
     ],
-    schedule: {},          // { 'YYYY-MM-DD': shiftId }
+    schedule: {},          // { 'YYYY-MM-DD': shiftId }（当前激活班表的工作副本）
+    profiles: null,        // 多套班表：{ id: { id, name, schedule } }
+    activeProfile: 'main', // 当前激活班表 id
     fired: {}              // { 'YYYY-MM-DD': true } 已响过的闹钟
   };
 
   let S = load();
+  migrateProfiles();   // 兼容旧备份：把单班表迁移成多套班表结构
   let viewYear, viewMonth;         // 当前显示的月份
   let pickDate = null;             // 抽屉正在编辑的日期
   let paintShift = null;           // 连点模式选中的班次
@@ -806,7 +882,12 @@ window.__SINGLE_FILE__ = true;
     }
   }
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('保存失败：存储空间不足'); }
+    try {
+      if (S.profiles && S.activeProfile && S.profiles[S.activeProfile]) {
+        S.profiles[S.activeProfile].schedule = S.schedule;   // 同步工作副本回当前班表
+      }
+      localStorage.setItem(KEY, JSON.stringify(S));
+    } catch (e) { toast('保存失败：存储空间不足'); }
   }
 
   /* ================= 工具 ================= */
@@ -954,6 +1035,7 @@ window.__SINGLE_FILE__ = true;
       grid.appendChild(cell);
     }
     renderLegend();
+    renderStats();
   }
 
   function renderLegend() {
@@ -1251,6 +1333,7 @@ window.__SINGLE_FILE__ = true;
     renderPaint();
     renderWeather();
     renderToday();
+    renderProfileBar();
     scheduleNextAlarm();
   }
 
@@ -1286,7 +1369,7 @@ window.__SINGLE_FILE__ = true;
     $$('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
     $$('.nav-tab').forEach((t) => t.classList.toggle('on', t.dataset.view === name));
     if (name === 'settings') renderSettings();
-    if (name === 'schedule') { renderCalendar(); renderAlarmList(); renderPaint(); }
+    if (name === 'schedule') { renderCalendar(); renderAlarmList(); renderPaint(); renderProfileBar(); }
     if (name === 'home') { renderHero(); renderCountdown(); }
     window.scrollTo(0, 0);
   }
@@ -1658,8 +1741,9 @@ window.__SINGLE_FILE__ = true;
       if (/\.json$/i.test(f.name)) {
         try {
           const d = JSON.parse(txt);
-          if (!d.schedule) throw 0;
+          if (!d.schedule && !d.profiles) throw 0;
           S = Object.assign(JSON.parse(JSON.stringify(DEFAULT)), d);
+          migrateProfiles();
           save(); closeSheets(); renderAll();
           toast('备份已恢复');
         } catch (err) { toast('不是有效的备份文件'); }
@@ -1970,6 +2054,201 @@ window.__SINGLE_FILE__ = true;
       scheduleNextAlarm();
     }, ms + 500);
   }
+
+  /* ================= 多套班表 + 数据与统计 ================= */
+  function cloneObj(o) { try { return JSON.parse(JSON.stringify(o)); } catch (e) { return {}; } }
+  function migrateProfiles() {
+    if (!S.profiles || typeof S.profiles !== 'object' || Array.isArray(S.profiles)) S.profiles = {};
+    if (!S.activeProfile || !S.profiles[S.activeProfile]) {
+      const legacy = (S.schedule && typeof S.schedule === 'object') ? S.schedule : {};
+      S.profiles['main'] = { id: 'main', name: '本班', schedule: cloneObj(legacy) };
+      S.activeProfile = 'main';
+      S.schedule = cloneObj(legacy);
+    } else {
+      const p = S.profiles[S.activeProfile];
+      S.schedule = cloneObj(p.schedule || {});
+    }
+    if (!S.profiles['main']) S.profiles['main'] = { id: 'main', name: '本班', schedule: cloneObj(S.schedule) };
+  }
+  function renderProfileBar() {
+    const box = $('#profileChips');
+    if (!box) return;
+    box.innerHTML = '';
+    Object.keys(S.profiles).forEach((pid) => {
+      const p = S.profiles[pid];
+      const b = document.createElement('button');
+      b.className = 'pchip' + (pid === S.activeProfile ? ' on' : '');
+      b.textContent = p.name;
+      b.addEventListener('click', () => switchProfile(pid));
+      box.appendChild(b);
+    });
+  }
+  function switchProfile(pid) {
+    if (pid === S.activeProfile || !S.profiles[pid]) return;
+    S.profiles[S.activeProfile].schedule = S.schedule;
+    S.activeProfile = pid;
+    S.schedule = cloneObj(S.profiles[pid].schedule || {});
+    save(); renderAll(); renderProfileBar(); renderProfileSheet();
+    toast('已切换到「' + S.profiles[pid].name + '」');
+  }
+  function renderProfileSheet() {
+    const box = $('#profileList');
+    if (!box) return;
+    box.innerHTML = '';
+    Object.keys(S.profiles).forEach((pid) => {
+      const p = S.profiles[pid];
+      const row = document.createElement('div');
+      row.className = 'prow' + (pid === S.activeProfile ? ' on' : '');
+      row.innerHTML =
+        '<span class="pname">' + esc(p.name) + (pid === S.activeProfile ? ' · 当前' : '') +
+        ' <small>' + Object.keys(p.schedule || {}).length + ' 天</small></span>' +
+        '<span class="pctrl">' +
+        (pid === S.activeProfile ? '' : '<button class="pswitch">切换</button>') +
+        '<button class="prename">改名</button>' +
+        '<button class="pdel">删除</button></span>';
+      const sw = row.querySelector('.pswitch');
+      if (sw) sw.addEventListener('click', () => switchProfile(pid));
+      row.querySelector('.prename').addEventListener('click', () => {
+        const n = prompt('修改班表名称：', p.name);
+        if (!n) return;
+        S.profiles[pid].name = n; save(); renderProfileBar(); renderProfileSheet();
+      });
+      row.querySelector('.pdel').addEventListener('click', () => {
+        if (Object.keys(S.profiles).length <= 1) { toast('至少保留一个班表'); return; }
+        if (!confirm('删除「' + p.name + '」？里面的排班会一起清空')) return;
+        delete S.profiles[pid];
+        if (S.activeProfile === pid) {
+          const first = Object.keys(S.profiles)[0];
+          S.activeProfile = first;
+          S.schedule = cloneObj(S.profiles[first].schedule || {});
+        }
+        save(); renderAll(); renderProfileBar(); renderProfileSheet();
+        toast('已删除「' + p.name + '」');
+      });
+      box.appendChild(row);
+    });
+  }
+  function durMin(a, b) {
+    const [h1, m1] = a.split(':').map(Number);
+    const [h2, m2] = b.split(':').map(Number);
+    return (h2 * 60 + m2) - (h1 * 60 + m1);
+  }
+  function renderStats() {
+    const box = $('#statBox');
+    if (!box) return;
+    const sm = $('#statMonth');
+    if (sm) sm.textContent = viewYear + '年' + (viewMonth + 1) + '月';
+    const dim = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const counts = {};
+    let workDays = 0, restDays = 0, totalMin = 0;
+    S.shifts.forEach((s) => { counts[s.id] = 0; });
+    for (let d = 1; d <= dim; d++) {
+      const key = viewYear + '-' + pad(viewMonth + 1) + '-' + pad(d);
+      const sid = S.schedule[key];
+      if (!sid) continue;
+      const sh = getShift(sid);
+      if (!sh) continue;
+      counts[sid] = (counts[sid] || 0) + 1;
+      if (sh.start) {
+        workDays++;
+        if (sh.end) totalMin += durMin(sh.start, sh.end);
+      } else restDays++;
+    }
+    const hrs = (totalMin / 60).toFixed(1);
+    let html = '<div class="stat-top">' +
+      '<div class="stat-cell"><b>' + workDays + '</b><span>上班天</span></div>' +
+      '<div class="stat-cell"><b>' + restDays + '</b><span>休息天</span></div>' +
+      '<div class="stat-cell"><b>' + hrs + '</b><span>工时(h)</span></div></div>' +
+      '<div class="stat-break">';
+    S.shifts.forEach((s) => {
+      if (!counts[s.id]) return;
+      html += '<div class="stat-b"><span class="stat-dot" style="background:' + s.color + '"></span>' +
+        '<span class="stat-n">' + esc(s.name) + '</span><span class="stat-c">' + counts[s.id] + ' 天</span></div>';
+    });
+    html += '</div>';
+    box.innerHTML = html;
+  }
+  function roundRect(x, X, Y, w, h, r) {
+    x.beginPath();
+    x.moveTo(X + r, Y);
+    x.arcTo(X + w, Y, X + w, Y + h, r);
+    x.arcTo(X + w, Y + h, X, Y + h, r);
+    x.arcTo(X, Y + h, X, Y, r);
+    x.arcTo(X, Y, X + w, Y, r);
+    x.closePath();
+  }
+  function exportWeekImage() {
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7;   // 周一为首列
+    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
+      days.push({ d: d, sh: shiftOf(ymd(d)) });
+    }
+    const W = 720, rowH = 92, padTop = 132, H = padTop + 7 * rowH + 44;
+    const scale = Math.min(3, window.devicePixelRatio || 2);
+    const cv = document.createElement('canvas');
+    cv.width = W * scale; cv.height = H * scale;
+    const x = cv.getContext('2d');
+    x.scale(scale, scale);
+    const grad = x.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, '#15183a'); grad.addColorStop(1, '#0c0e22');
+    x.fillStyle = grad; x.fillRect(0, 0, W, H);
+    x.fillStyle = '#fff'; x.font = '700 34px -apple-system,sans-serif';
+    x.fillText('本周排班 · ' + (S.profiles[S.activeProfile] ? S.profiles[S.activeProfile].name : '本班'), 36, 62);
+    x.fillStyle = 'rgba(255,255,255,.6)'; x.font = '500 20px -apple-system,sans-serif';
+    const range = (mon.getMonth() + 1) + '/' + mon.getDate() + ' - ' + (days[6].d.getMonth() + 1) + '/' + days[6].d.getDate();
+    x.fillText(range + '  ·  ' + now.getFullYear() + '年', 36, 98);
+    const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+    days.forEach((it, i) => {
+      const y = padTop + i * rowH;
+      x.fillStyle = 'rgba(255,255,255,.06)';
+      roundRect(x, 24, y, W - 48, rowH - 14, 18); x.fill();
+      x.fillStyle = it.sh ? it.sh.color : '#3f4460';
+      roundRect(x, 24, y, 10, rowH - 14, 6); x.fill();
+      x.fillStyle = 'rgba(255,255,255,.85)'; x.font = '600 22px -apple-system,sans-serif';
+      x.fillText(labels[i], 50, y + 40);
+      x.fillStyle = 'rgba(255,255,255,.5)'; x.font = '500 17px -apple-system,sans-serif';
+      x.fillText((it.d.getMonth() + 1) + '/' + it.d.getDate(), 50, y + 66);
+      x.textAlign = 'right';
+      if (it.sh) {
+        x.fillStyle = '#fff'; x.font = '700 26px -apple-system,sans-serif';
+        x.fillText(it.sh.name, W - 44, y + 42);
+        x.fillStyle = 'rgba(255,255,255,.6)'; x.font = '500 18px -apple-system,sans-serif';
+        x.fillText(it.sh.start ? (it.sh.start + (it.sh.end ? (' - ' + it.sh.end) : '')) : '休息', W - 44, y + 68);
+      } else {
+        x.fillStyle = 'rgba(255,255,255,.35)'; x.font = '500 20px -apple-system,sans-serif';
+        x.fillText('未排班', W - 44, y + 56);
+      }
+      x.textAlign = 'left';
+    });
+    x.fillStyle = 'rgba(255,255,255,.35)'; x.font = '500 15px -apple-system,sans-serif';
+    x.fillText('由「班次闹钟工作台」生成', 36, H - 16);
+    cv.toBlob((blob) => {
+      if (!blob) { toast('生成失败'); return; }
+      const file = new File([blob], '本周排班.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: '本周排班' }).catch(() => {});
+      } else {
+        download('本周排班.png', blob, 'image/png');
+        toast('已生成图片，可长按保存/分享');
+      }
+    }, 'image/png');
+  }
+
+  $('#btnAddProfile').addEventListener('click', () => {
+    const name = prompt('给新班表起个名字（如 替班 / 培训 / 夜班轮换）：', '班表' + (Object.keys(S.profiles).length + 1));
+    if (!name) return;
+    const id = 'p' + Date.now().toString(36);
+    S.profiles[id] = { id: id, name: name, schedule: cloneObj(S.schedule) };
+    S.activeProfile = id;
+    save(); renderAll(); renderProfileBar(); renderProfileSheet();
+    toast('已新建并切换到「' + name + '」');
+  });
+  $('#btnManageProfile').addEventListener('click', () => { renderProfileSheet(); openSheet('#sheetProfiles'); });
+  $('#btnWeekImg').addEventListener('click', exportWeekImage);
+  $('#profilesClose').addEventListener('click', closeSheets);
 
   /* ================= 启动 ================= */
   function init() {

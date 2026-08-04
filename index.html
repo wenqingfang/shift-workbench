@@ -85,6 +85,13 @@
 
   <!-- ===================== 排班 ===================== -->
   <section class="view" id="view-schedule">
+    <div class="profile-bar">
+      <span class="profile-label">班表</span>
+      <div class="profile-chips" id="profileChips"></div>
+      <button class="profile-btn" id="btnAddProfile" title="新增班表">＋</button>
+      <button class="profile-btn" id="btnManageProfile" title="管理班表">⚙</button>
+    </div>
+
     <section class="card glass">
       <div class="cal-head">
         <button class="nav-btn" id="prevMonth" aria-label="上个月">‹</button>
@@ -114,6 +121,18 @@
         <span class="pill" id="alarmCount">0</span>
       </div>
       <div class="alarm-list" id="alarmList"></div>
+    </section>
+
+    <section class="card glass">
+      <div class="card-head">
+        <h2>本月统计</h2>
+        <span class="pill" id="statMonth">--</span>
+      </div>
+      <div id="statBox" class="stat-box"></div>
+      <button class="btn-full grad" id="btnWeekImg" style="margin-top:14px">
+        <span class="btn-icon">🖼️</span>导出本周排班图片
+        <small>生成好看的周报，直接发班组群</small>
+      </button>
     </section>
 
     <div class="mini-actions">
@@ -209,6 +228,7 @@
             <p><b>1 · 把本页当 App 用</b><br>iPhone Safari：分享 → 添加到主屏幕。<br>之后桌面会多一个图标，点开即用，不需要联网。</p>
             <p><b>2 · 连点模式</b><br>日历上方选一个班次后开启连点，点日期直接刷班，批量排班很快。</p>
             <p><b>3 · 换手机 / 清缓存前</b><br>先点「导出备份」存一份 JSON，新设备用「导入备份」还原，排班不会丢。</p>
+            <p><b>4 · 多套班表</b><br>排班页顶部「班表」可切换本班 / 替班 / 培训等多套排班；点 ＋ 新建、⚙ 管理（改名 / 删除）。每套独立保存，互不干扰。</p>
           </div>
         </div>
 
@@ -323,6 +343,19 @@
       <span class="btn-icon">⚡</span>一键添加闹钟
       <small>自动复制清单并唤起快捷指令</small>
     </button>
+  </div>
+</div>
+
+<!-- ===== 抽屉：管理班表 ===== -->
+<div class="sheet glass" id="sheetProfiles">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <h3>管理班表</h3>
+    <button class="ghost-btn" id="profilesClose">关闭</button>
+  </div>
+  <div class="sheet-body">
+    <p class="hint">切换 / 改名 / 删除班表。每个班表独立保存排班，互不影响；排班、闹钟、统计都按当前班表计算。</p>
+    <div id="profileList" class="profile-list"></div>
   </div>
 </div>
 
