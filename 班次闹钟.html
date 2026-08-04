@@ -247,7 +247,7 @@ input[type=range]{flex:1;-webkit-appearance:none;height:5px;border-radius:5px;ba
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--grad);box-shadow:0 3px 10px rgba(124,92,255,.5)}
 .lead-val{font-size:14px;font-weight:600;min-width:72px;text-align:right;font-variant-numeric:tabular-nums}
 .shift-editor{display:flex;flex-direction:column;gap:8px}
-.se{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.se{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
 .se input[type=text]{flex:1;min-width:0;background:transparent;border:none;color:var(--txt);font-size:14px;font-weight:600;padding:2px 0;outline:none}
 .se input[type=time]{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--txt);font-size:13px;padding:4px 6px;outline:none}
 .se input[type=color]{width:26px;height:26px;padding:0;border:none;border-radius:8px;background:transparent;flex:0 0 auto}
@@ -461,6 +461,13 @@ textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
 [data-mode="light"] .pchip{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.08);color:var(--txt-dim)}
 [data-mode="light"] .stat-cell,.stat-b,.prow{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
 
+/* 工时统计说明 / 缺下班时间提示 */
+.stat-cap{font-size:11px;color:var(--txt-faint);line-height:1.55;margin:10px 2px 0}
+.stat-note{font-size:11.5px;line-height:1.5;margin-top:10px;padding:8px 10px;border-radius:var(--r-sm);
+  background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#fcd34d}
+[data-mode="light"] .stat-note{background:rgba(251,191,36,.18);color:#92630a}
+[data-mode="light"] .stat-cap{color:#7a7f99}
+
 </style>
 <script>
 window.__SINGLE_FILE__ = true;
@@ -593,6 +600,7 @@ window.__SINGLE_FILE__ = true;
         <span class="pill" id="statMonth">--</span>
       </div>
       <div id="statBox" class="stat-box"></div>
+      <p class="stat-cap">工时 = 下班时间 − 上班时间，仅统计在「班次编辑」里设了上下班时间的班次；没设下班时间的按 0 计（会标 ⚠️）。夜班跨午夜自动 +24h。</p>
       <button class="btn-full grad" id="btnWeekImg" style="margin-top:14px">
         <span class="btn-icon">🖼️</span>导出本周排班图片
         <small>生成好看的周报，直接发班组群</small>
@@ -1438,11 +1446,12 @@ window.__SINGLE_FILE__ = true;
       row.className = 'se' + (s.start ? '' : ' off');
       row.innerHTML =
         '<input type="color" value="' + s.color + '">' +
-        '<input type="text" value="' + esc(s.name) + '" maxlength="8">' +
-        '<input type="time" value="' + (s.start || '') + '">' +
+        '<input type="text" value="' + esc(s.name) + '" maxlength="8" placeholder="班次名">' +
+        '<input type="time" value="' + (s.start || '') + '" title="上班时间" aria-label="上班时间">' +
+        '<input type="time" value="' + (s.end || '') + '" title="下班时间" aria-label="下班时间">' +
         '<button class="clone" title="克隆">⧉</button>' +
         '<button class="del" title="删除">✕</button>';
-      const [color, name, time, clone, del] = [row.children[0], row.children[1], row.children[2], row.children[3], row.children[4]];
+      const [color, name, time, etime, clone, del] = [row.children[0], row.children[1], row.children[2], row.children[3], row.children[4], row.children[5]];
       color.addEventListener('input', () => { s.color = color.value; save(); renderCalendar(); renderLegend(); });
       name.addEventListener('input', () => { s.name = name.value || '班次'; save(); });
       name.addEventListener('blur', () => { renderAll(); });
@@ -1450,8 +1459,9 @@ window.__SINGLE_FILE__ = true;
         s.start = time.value;
         s.alarm = !!time.value;
         row.classList.toggle('off', !time.value);
-        save(); renderAll();
+        save(); renderAll(); renderStats();
       });
+      etime.addEventListener('change', () => { s.end = etime.value; save(); renderStats(); });
       clone.addEventListener('click', () => {
         const colors = ['#34d399', '#fb7185', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'];
         S.shifts.push({
@@ -2173,7 +2183,9 @@ window.__SINGLE_FILE__ = true;
   function durMin(a, b) {
     const [h1, m1] = a.split(':').map(Number);
     const [h2, m2] = b.split(':').map(Number);
-    return (h2 * 60 + m2) - (h1 * 60 + m1);
+    let d = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (d < 0) d += 24 * 60; // 跨午夜（如夜班 22:00-06:00）按 +24h 算
+    return d;
   }
   function renderStats() {
     const box = $('#statBox');
@@ -2182,7 +2194,7 @@ window.__SINGLE_FILE__ = true;
     if (sm) sm.textContent = viewYear + '年' + (viewMonth + 1) + '月';
     const dim = new Date(viewYear, viewMonth + 1, 0).getDate();
     const counts = {};
-    let workDays = 0, restDays = 0, totalMin = 0;
+    let workDays = 0, restDays = 0, totalMin = 0, noEndDays = 0;
     S.shifts.forEach((s) => { counts[s.id] = 0; });
     for (let d = 1; d <= dim; d++) {
       const key = viewYear + '-' + pad(viewMonth + 1) + '-' + pad(d);
@@ -2194,9 +2206,10 @@ window.__SINGLE_FILE__ = true;
       if (sh.start) {
         workDays++;
         if (sh.end) totalMin += durMin(sh.start, sh.end);
+        else noEndDays++;
       } else restDays++;
     }
-    const hrs = (totalMin / 60).toFixed(1);
+    const hrs = totalMin > 0 ? (totalMin / 60).toFixed(1) : (workDays > 0 ? '—' : '0');
     let html = '<div class="stat-top">' +
       '<div class="stat-cell"><b>' + workDays + '</b><span>上班天</span></div>' +
       '<div class="stat-cell"><b>' + restDays + '</b><span>休息天</span></div>' +
@@ -2208,6 +2221,9 @@ window.__SINGLE_FILE__ = true;
         '<span class="stat-n">' + esc(s.name) + '</span><span class="stat-c">' + counts[s.id] + ' 天</span></div>';
     });
     html += '</div>';
+    if (noEndDays > 0) {
+      html += '<div class="stat-note">⚠️ 本月有 ' + noEndDays + ' 天排了班但没设「下班时间」，工时未计入。去 设置 → 班次编辑 补上下班时间即可。</div>';
+    }
     box.innerHTML = html;
   }
   function roundRect(x, X, Y, w, h, r) {

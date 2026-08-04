@@ -580,11 +580,12 @@
       row.className = 'se' + (s.start ? '' : ' off');
       row.innerHTML =
         '<input type="color" value="' + s.color + '">' +
-        '<input type="text" value="' + esc(s.name) + '" maxlength="8">' +
-        '<input type="time" value="' + (s.start || '') + '">' +
+        '<input type="text" value="' + esc(s.name) + '" maxlength="8" placeholder="班次名">' +
+        '<input type="time" value="' + (s.start || '') + '" title="上班时间" aria-label="上班时间">' +
+        '<input type="time" value="' + (s.end || '') + '" title="下班时间" aria-label="下班时间">' +
         '<button class="clone" title="克隆">⧉</button>' +
         '<button class="del" title="删除">✕</button>';
-      const [color, name, time, clone, del] = [row.children[0], row.children[1], row.children[2], row.children[3], row.children[4]];
+      const [color, name, time, etime, clone, del] = [row.children[0], row.children[1], row.children[2], row.children[3], row.children[4], row.children[5]];
       color.addEventListener('input', () => { s.color = color.value; save(); renderCalendar(); renderLegend(); });
       name.addEventListener('input', () => { s.name = name.value || '班次'; save(); });
       name.addEventListener('blur', () => { renderAll(); });
@@ -592,8 +593,9 @@
         s.start = time.value;
         s.alarm = !!time.value;
         row.classList.toggle('off', !time.value);
-        save(); renderAll();
+        save(); renderAll(); renderStats();
       });
+      etime.addEventListener('change', () => { s.end = etime.value; save(); renderStats(); });
       clone.addEventListener('click', () => {
         const colors = ['#34d399', '#fb7185', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'];
         S.shifts.push({
@@ -1315,7 +1317,9 @@
   function durMin(a, b) {
     const [h1, m1] = a.split(':').map(Number);
     const [h2, m2] = b.split(':').map(Number);
-    return (h2 * 60 + m2) - (h1 * 60 + m1);
+    let d = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (d < 0) d += 24 * 60; // 跨午夜（如夜班 22:00-06:00）按 +24h 算
+    return d;
   }
   function renderStats() {
     const box = $('#statBox');
@@ -1324,7 +1328,7 @@
     if (sm) sm.textContent = viewYear + '年' + (viewMonth + 1) + '月';
     const dim = new Date(viewYear, viewMonth + 1, 0).getDate();
     const counts = {};
-    let workDays = 0, restDays = 0, totalMin = 0;
+    let workDays = 0, restDays = 0, totalMin = 0, noEndDays = 0;
     S.shifts.forEach((s) => { counts[s.id] = 0; });
     for (let d = 1; d <= dim; d++) {
       const key = viewYear + '-' + pad(viewMonth + 1) + '-' + pad(d);
@@ -1336,9 +1340,10 @@
       if (sh.start) {
         workDays++;
         if (sh.end) totalMin += durMin(sh.start, sh.end);
+        else noEndDays++;
       } else restDays++;
     }
-    const hrs = (totalMin / 60).toFixed(1);
+    const hrs = totalMin > 0 ? (totalMin / 60).toFixed(1) : (workDays > 0 ? '—' : '0');
     let html = '<div class="stat-top">' +
       '<div class="stat-cell"><b>' + workDays + '</b><span>上班天</span></div>' +
       '<div class="stat-cell"><b>' + restDays + '</b><span>休息天</span></div>' +
@@ -1350,6 +1355,9 @@
         '<span class="stat-n">' + esc(s.name) + '</span><span class="stat-c">' + counts[s.id] + ' 天</span></div>';
     });
     html += '</div>';
+    if (noEndDays > 0) {
+      html += '<div class="stat-note">⚠️ 本月有 ' + noEndDays + ' 天排了班但没设「下班时间」，工时未计入。去 设置 → 班次编辑 补上下班时间即可。</div>';
+    }
     box.innerHTML = html;
   }
   function roundRect(x, X, Y, w, h, r) {
