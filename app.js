@@ -12,6 +12,11 @@
   /* ---------- 默认数据 ---------- */
   const DEFAULT = {
     leadMinutes: 60,
+    theme: 'aurora',       // aurora / sunset / ocean / mono
+    darkMode: true,
+    fontScale: 1,          // 1 / 1.15 / 1.3
+    homeCards: ['hero', 'weather', 'tips'], // 首页卡片顺序（hero 始终置顶，weather/tips 可显隐排序）
+    templates: [],         // 班表模板 [{ name, seq:[shiftId,...] }]
     shifts: [
       { id: 'am',    name: '上午班', start: '08:00', end: '12:00', color: '#f59e0b', alarm: true },
       { id: 'pm',    name: '下午班', start: '14:00', end: '18:00', color: '#7c5cff', alarm: true },
@@ -389,8 +394,14 @@
     } else $('#tipWeather').textContent = '🌤 天气加载中…';
     const hol = holidayOf(today);
     if (hol) {
-      if (hol.type === 'holiday') $('#tipHoliday').textContent = '🎉 今天是' + hol.name + '，放假休息～';
-      else $('#tipHoliday').textContent = '⚠️ 今天' + hol.name + '调休上班，别忘啦';
+      const sh = shiftOf(today);
+      if (hol.type === 'holiday') {
+        if (sh && sh.start) $('#tipHoliday').textContent = '🎉 今天' + hol.name + '放假，但你排了「' + sh.name + '」，确认下？';
+        else $('#tipHoliday').textContent = '🎉 今天是' + hol.name + '，放假休息～';
+      } else {
+        if (!sh || !sh.start) $('#tipHoliday').textContent = '⚠️ 今天' + hol.name + '调休上班，别忘啦';
+        else $('#tipHoliday').textContent = '⚠️ 今天' + hol.name + '调休上班（已排「' + sh.name + '」）';
+      }
     } else $('#tipHoliday').textContent = '🎉 今天无特殊节假日';
   }
   function buildDailySummary() {
@@ -488,6 +499,31 @@
     scheduleNextAlarm();
   }
 
+  /* ================= 外观自定义 ================= */
+  function applyAppearance() {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', S.theme || 'aurora');
+    root.setAttribute('data-mode', S.darkMode === false ? 'light' : 'dark');
+    root.style.setProperty('--font-scale', (S.fontScale || 1));
+    renderHomeCards();
+  }
+  /** 按 homeCards 顺序重排首页可配置卡片（hero 始终置顶） */
+  function renderHomeCards() {
+    const view = $('#view-home');
+    if (!view) return;
+    const weather = $('#weatherCard');
+    const tips = $('#tipsCard');
+    if (weather) weather.remove();
+    if (tips) tips.remove();
+    const seq = (S.homeCards && S.homeCards.length ? S.homeCards : ['hero', 'weather', 'tips'])
+      .filter((x) => x !== 'hero');
+    let anchor = $('#heroCard') || view;
+    seq.forEach((id) => {
+      const el = id === 'weather' ? weather : id === 'tips' ? tips : null;
+      if (el) { view.insertBefore(el, anchor.nextSibling); anchor = el; }
+    });
+  }
+
   /* ================= 底部导航：视图切换 ================= */
   let curView = 'home';
   function switchView(name) {
@@ -521,6 +557,12 @@
     $('#leadVal').textContent = S.leadMinutes + ' 分钟';
     $('#leadExample').textContent = minusLead('14:00');
 
+    // 外观
+    const themeSel = $('#themeSel'); if (themeSel) themeSel.value = S.theme || 'aurora';
+    const darkToggle = $('#darkToggle'); if (darkToggle) darkToggle.checked = S.darkMode !== false;
+    const fontSel = $('#fontSel'); if (fontSel) fontSel.value = String(S.fontScale || 1);
+    renderHomeCardsEditor();
+
     const box = $('#shiftEditor');
     box.innerHTML = '';
     S.shifts.forEach((s, i) => {
@@ -530,8 +572,9 @@
         '<input type="color" value="' + s.color + '">' +
         '<input type="text" value="' + esc(s.name) + '" maxlength="8">' +
         '<input type="time" value="' + (s.start || '') + '">' +
-        '<button class="del">✕</button>';
-      const [color, name, time, del] = [row.children[0], row.children[1], row.children[2], row.children[3]];
+        '<button class="clone" title="克隆">⧉</button>' +
+        '<button class="del" title="删除">✕</button>';
+      const [color, name, time, clone, del] = [row.children[0], row.children[1], row.children[2], row.children[3], row.children[4]];
       color.addEventListener('input', () => { s.color = color.value; save(); renderCalendar(); renderLegend(); });
       name.addEventListener('input', () => { s.name = name.value || '班次'; save(); });
       name.addEventListener('blur', () => { renderAll(); });
@@ -540,6 +583,15 @@
         s.alarm = !!time.value;
         row.classList.toggle('off', !time.value);
         save(); renderAll();
+      });
+      clone.addEventListener('click', () => {
+        const colors = ['#34d399', '#fb7185', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'];
+        S.shifts.push({
+          id: 's' + Date.now().toString(36),
+          name: s.name + ' 副本', start: s.start, end: s.end, alarm: s.alarm,
+          color: colors[S.shifts.length % colors.length]
+        });
+        save(); renderSettings(); renderAll();
       });
       del.addEventListener('click', () => {
         if (S.shifts.length <= 1) { toast('至少保留一个班次'); return; }
@@ -551,6 +603,50 @@
       });
       box.appendChild(row);
     });
+  }
+
+  /** 设置页：首页卡片显隐 + 排序编辑器 */
+  function renderHomeCardsEditor() {
+    const box = $('#homeCardsBox');
+    if (!box) return;
+    box.innerHTML = '';
+    const labels = { weather: '天气与贴心提醒', tips: '今日贴心提醒' };
+    const configurable = ['weather', 'tips'];
+    const saved = (S.homeCards && S.homeCards.length) ? S.homeCards : ['hero', 'weather', 'tips'];
+    configurable.forEach((id) => {
+      const shown = saved.includes(id);
+      const idx = saved.indexOf(id);
+      const row = document.createElement('div');
+      row.className = 'hc-row';
+      row.innerHTML =
+        '<span class="hc-name">' + (labels[id] || id) + '</span>' +
+        '<span class="hc-ctrl">' +
+          '<button class="hc-up" ' + (idx <= 1 || !shown ? 'disabled' : '') + '>↑</button>' +
+          '<button class="hc-down" ' + (idx >= saved.length - 1 || !shown ? 'disabled' : '') + '>↓</button>' +
+          '<label class="switch sm"><input type="checkbox" ' + (shown ? 'checked' : '') + '><span class="slider"></span></label>' +
+        '</span>';
+      const up = row.querySelector('.hc-up');
+      const down = row.querySelector('.hc-down');
+      const chk = row.querySelector('input');
+      chk.addEventListener('change', () => {
+        let arr = (S.homeCards && S.homeCards.length) ? S.homeCards.slice() : ['hero', 'weather', 'tips'];
+        if (chk.checked) { if (!arr.includes(id)) arr.push(id); }
+        else { arr = arr.filter((x) => x !== id); }
+        S.homeCards = arr; save(); renderHomeCardsEditor(); renderHomeCards();
+      });
+      up.addEventListener('click', () => { moveHomeCard(id, -1); });
+      down.addEventListener('click', () => { moveHomeCard(id, 1); });
+      box.appendChild(row);
+    });
+  }
+  function moveHomeCard(id, dir) {
+    let arr = (S.homeCards && S.homeCards.length) ? S.homeCards.slice() : ['hero', 'weather', 'tips'];
+    const i = arr.indexOf(id);
+    if (i < 0) return;
+    const j = i + dir;
+    if (j < 0 || j >= arr.length) return;
+    const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    S.homeCards = arr; save(); renderHomeCardsEditor(); renderHomeCards();
   }
 
   $('#btnSettings').addEventListener('click', () => switchView('settings'));
@@ -567,6 +663,13 @@
     $('#leadExample').textContent = minusLead('14:00');
     save(); renderHero(); renderAlarmList();
   });
+  const themeSel = $('#themeSel');
+  if (themeSel) themeSel.addEventListener('change', () => { S.theme = themeSel.value; save(); applyAppearance(); });
+  const darkToggle = $('#darkToggle');
+  if (darkToggle) darkToggle.addEventListener('change', () => { S.darkMode = darkToggle.checked; save(); applyAppearance(); });
+  const fontSel = $('#fontSel');
+  if (fontSel) fontSel.addEventListener('change', () => { S.fontScale = +fontSel.value; save(); applyAppearance(); });
+
   $('#btnAddShift').addEventListener('click', () => {
     const colors = ['#34d399', '#fb7185', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'];
     S.shifts.push({
@@ -610,6 +713,32 @@
   $('#btnToday').addEventListener('click', () => {
     const n = new Date(); viewYear = n.getFullYear(); viewMonth = n.getMonth(); renderCalendar();
   });
+  /** 把上个月的排班按日期复制到当前显示的月份（跳过目标月不存在的日期） */
+  function copyPrevMonthToView() {
+    let py = viewMonth - 1, pY = viewYear;
+    if (py < 0) { py = 11; pY--; }
+    const dim = new Date(viewYear, viewMonth + 1, 0).getDate();
+    let cnt = 0;
+    Object.keys(S.schedule).forEach((k) => {
+      const p = k.split('-');
+      if (+p[0] === pY && +p[1] === py + 1) {
+        const day = +p[2];
+        if (day <= dim) {
+          const nk = viewYear + '-' + pad(viewMonth + 1) + '-' + pad(day);
+          S.schedule[nk] = S.schedule[k];
+          cnt++;
+        }
+      }
+    });
+    return cnt;
+  }
+  $('#btnCopyMonth').addEventListener('click', () => {
+    let py = viewMonth - 1, pY = viewYear;
+    if (py < 0) { py = 11; pY--; }
+    if (!confirm('把 ' + pY + '年' + (py + 1) + '月 的排班按日期复制到当前显示的 ' + viewYear + '年' + (viewMonth + 1) + '月？\n（目标月已有排班的日子会被覆盖）')) return;
+    const cnt = copyPrevMonthToView();
+    save(); renderAll(); toast('已复制 ' + cnt + ' 天');
+  });
 
   /* ================= 导入 ================= */
   $('#btnImport').addEventListener('click', () => {
@@ -617,6 +746,7 @@
     $('#importMonth').value = n.getFullYear() + '-' + pad(n.getMonth() + 1);
     $('#cycStart').value = ymd(n);
     renderCycChips();
+    renderTplList();
     $('#importPreview').hidden = true;
     pendingImport = null;
     openSheet('#sheetImport');
@@ -721,6 +851,33 @@
     }
     toast('已清空循环顺序和预览');
   });
+  // 班表模板
+  function renderTplList() {
+    const sel = $('#tplSel');
+    if (!sel) return;
+    sel.innerHTML = '';
+    if (!S.templates.length) { sel.innerHTML = '<option value="">（暂无模板）</option>'; return; }
+    S.templates.forEach((t, i) => {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = t.name + '（' + t.seq.length + ' 天一轮）';
+      sel.appendChild(o);
+    });
+  }
+  $('#cycSaveTpl').addEventListener('click', () => {
+    if (!cycleSeq.length) { toast('先添加循环顺序'); return; }
+    const name = prompt('给这套循环起个名字：', '班表' + (S.templates.length + 1));
+    if (!name) return;
+    S.templates.push({ name: name, seq: cycleSeq.slice() });
+    save(); renderTplList(); toast('已保存模板：' + name);
+  });
+  $('#btnUseTpl').addEventListener('click', () => {
+    const sel = $('#tplSel');
+    const t = S.templates[+sel.value];
+    if (!t) { toast('没有可套用的模板'); return; }
+    cycleSeq = t.seq.slice();
+    renderCycSeq(); toast('已套用：' + t.name);
+  });
+
   $('#btnCycGen').addEventListener('click', () => {
     if (!cycleSeq.length) { toast('先添加循环顺序'); return; }
     const sv = $('#cycStart').value;
@@ -1065,6 +1222,7 @@
     viewYear = n.getFullYear();
     viewMonth = n.getMonth();
     loadWeatherCache();
+    applyAppearance();   // 应用主题/深浅/字号/首页卡片顺序
     renderAll();
     switchView('home');
     fetchWeather();   // 后台刷新天气

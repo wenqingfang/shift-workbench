@@ -25,7 +25,7 @@
 
   <!-- ===================== 首页 ===================== -->
   <section class="view active" id="view-home">
-    <header class="hero glass">
+    <header class="hero glass" id="heroCard">
       <div class="hero-top">
         <div>
           <p class="hero-date" id="heroDate">--</p>
@@ -53,9 +53,9 @@
       </div>
     </header>
 
-    <section class="card glass" id="todayCard">
+    <section class="card glass" id="weatherCard">
       <div class="card-head">
-        <h2>今日贴心提醒</h2>
+        <h2>今日天气</h2>
         <button class="icon-btn-sm" id="btnWeatherRefresh" aria-label="刷新天气">↻</button>
       </div>
       <div class="weather-row">
@@ -72,6 +72,12 @@
       <div class="tips">
         <div class="tip" id="tipShift">💼 今天未排班</div>
         <div class="tip" id="tipWeather">🌤 天气加载中…</div>
+      </div>
+    </section>
+
+    <section class="card glass" id="tipsCard">
+      <div class="card-head"><h2>节假日提醒</h2></div>
+      <div class="tips">
         <div class="tip" id="tipHoliday">🎉 今天无特殊节假日</div>
       </div>
     </section>
@@ -110,6 +116,10 @@
       <div class="alarm-list" id="alarmList"></div>
     </section>
 
+    <div class="mini-actions">
+      <button class="action-sm" id="btnCopyMonth">⧉ 复制上月排班到本月</button>
+    </div>
+
     <section class="actions">
       <button class="action glass" id="btnImport">
         <span class="a-icon grad-ico">↧</span>
@@ -130,6 +140,29 @@
   <section class="view" id="view-settings">
     <section class="card glass" style="padding:16px 14px">
       <div class="stack">
+        <div class="field">
+          <label>外观</label>
+          <div class="field-inline"><label>主题色</label>
+            <select id="themeSel" class="sel">
+              <option value="aurora">极光紫（默认）</option>
+              <option value="sunset">日落橙</option>
+              <option value="ocean">深海蓝</option>
+              <option value="mono">石墨灰</option>
+            </select>
+          </div>
+          <div class="field-inline"><label>深浅色</label>
+            <label class="switch"><input type="checkbox" id="darkToggle"><span class="slider"></span></label>
+            <span class="hint-inline">关 = 浅色模式</span>
+          </div>
+          <div class="field-inline"><label>字号</label>
+            <select id="fontSel" class="sel">
+              <option value="1">标准</option>
+              <option value="1.15">大</option>
+              <option value="1.3">特大</option>
+            </select>
+          </div>
+        </div>
+
         <div class="field">
           <label>提前多久响闹钟</label>
           <div class="lead-row">
@@ -162,6 +195,12 @@
             <button class="btn-line danger" id="btnClear">清空排班</button>
             <button class="btn-line danger" id="btnWipe">彻底清除缓存（重置）</button>
           </div>
+        </div>
+
+        <div class="field">
+          <label>首页显示</label>
+          <p class="hint">勾选显示哪些卡片，用 ↑/↓ 调整顺序（顶部「今日班次」始终在最上）。</p>
+          <div id="homeCardsBox" class="hc-box"></div>
         </div>
 
         <div class="field">
@@ -243,6 +282,14 @@
       <div class="btn-row">
         <button class="btn-line" id="cycUndo">删除最后一个</button>
         <button class="btn-line" id="cycClear">清空</button>
+      </div>
+      <div class="tpl-box">
+        <label class="mini-label2">班表模板（保存常用循环，下次一键套用）</label>
+        <div class="btn-row">
+          <select id="tplSel" class="sel"></select>
+          <button class="btn-line grad" id="btnUseTpl">套用</button>
+        </div>
+        <button class="btn-line" id="cycSaveTpl">保存当前顺序为模板</button>
       </div>
       <button class="btn-full grad" id="btnCycGen">生成并预览</button>
     </div>

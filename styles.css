@@ -15,6 +15,49 @@
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-t:env(safe-area-inset-top,0px);
 }
+
+/* ===== 主题色 ===== */
+[data-theme="sunset"]{
+  --grad:linear-gradient(135deg,#ff7e5f,#ff5e7e 50%,#ffd36e);
+  --grad-soft:linear-gradient(135deg,rgba(255,126,95,.92),rgba(255,211,110,.88));
+}
+[data-theme="ocean"]{
+  --grad:linear-gradient(135deg,#2563eb,#22d3ee 55%,#34d399);
+  --grad-soft:linear-gradient(135deg,rgba(37,99,235,.92),rgba(34,211,238,.88));
+}
+[data-theme="mono"]{
+  --grad:linear-gradient(135deg,#6b7280,#8b7fd6 55%,#b0a8d9);
+  --grad-soft:linear-gradient(135deg,rgba(107,114,128,.92),rgba(176,168,217,.88));
+}
+
+/* ===== 浅色模式 ===== */
+[data-mode="light"]{
+  --bg:#eef1f8;
+  --txt:#1a1d2e;
+  --txt-dim:#5a6080;
+  --txt-faint:#8b90ad;
+  --glass-bg:linear-gradient(148deg,rgba(255,255,255,.72),rgba(255,255,255,.42));
+  --glass-brd:rgba(20,25,60,.1);
+  --glass-shadow:0 10px 30px rgba(20,25,60,.12);
+}
+[data-mode="light"] .aurora{
+  background:
+    radial-gradient(1200px 700px at 50% -10%,#e6ecff 0%,transparent 60%),
+    radial-gradient(900px 600px at 100% 100%,#dff3ff 0%,transparent 60%),
+    var(--bg);
+}
+[data-mode="light"] .day{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.06)}
+[data-mode="light"] .day.out{opacity:.4}
+[data-mode="light"] .mini-card{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.08)}
+[data-mode="light"] .paint-bar{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.06)}
+[data-mode="light"] .chip{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.08);color:var(--txt-dim)}
+[data-mode="light"] .sp{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
+[data-mode="light"] .al,.hc-row,.tpl-box,.se,.action-sm{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
+[data-mode="light"] .hc-name,.action-sm{color:var(--txt-dim)}
+[data-mode="light"] .tip,.pv,.sheet-foot,.hint-box,.help{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.07)}
+[data-mode="light"] .nav-tab{color:var(--txt-faint)}
+[data-mode="light"] .tabbar{background:rgba(238,241,248,.85)}
+[data-mode="light"] .legend{border-top-color:rgba(0,0,0,.08)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
 body{
@@ -22,7 +65,7 @@ body{
   background:var(--bg);
   color:var(--txt);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
-  font-size:15px;
+  font-size:calc(15px * var(--font-scale,1));
   line-height:1.5;
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
@@ -326,3 +369,30 @@ textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
 .cl-t{text-align:right;flex:0 0 auto}
 .cl-t b{font-size:17px;font-variant-numeric:tabular-nums;display:block;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .cl-t small{font-size:10px;color:var(--txt-faint)}
+
+/* ===== 首页卡片编辑器 ===== */
+.hc-box{display:flex;flex-direction:column;gap:8px}
+.hc-row{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border-radius:var(--r-sm);
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.hc-name{font-size:13px;color:var(--txt)}
+.hc-ctrl{display:flex;align-items:center;gap:8px}
+.hc-up,.hc-down{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+  font-size:15px;color:var(--txt-dim)}
+.hc-up:disabled,.hc-down:disabled{opacity:.3}
+.switch.sm{width:38px;height:22px}
+.switch.sm .slider:before{height:16px;width:16px;left:3px;top:3px}
+.switch.sm input:checked + .slider:before{transform:translateX(16px)}
+
+/* ===== 班表模板 ===== */
+.tpl-box{display:flex;flex-direction:column;gap:8px;margin-top:4px;padding:12px;border-radius:var(--r-sm);
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.tpl-box .sel{margin-bottom:2px}
+
+/* ===== 复制排班按钮 ===== */
+.mini-actions{margin-top:2px}
+.action-sm{width:100%;padding:11px;border-radius:var(--r-md);font-size:13.5px;font-weight:600;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);color:var(--txt-dim)}
+.action-sm:active{transform:scale(.98);background:rgba(255,255,255,.14)}
+
+/* ===== 班次克隆 ===== */
+.se .clone{color:#9ae7ff;font-size:15px;padding:0 4px;flex:0 0 auto}
