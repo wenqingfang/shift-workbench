@@ -5,6 +5,7 @@ dist/
 .workbuddy/
 .deploy_token
 deploy.sh
+frames_out/
 
 # Gitee 部署令牌（长期复用，切勿提交）
 .gitee_token
