@@ -262,6 +262,7 @@ textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
 .seq-i{font-size:11.5px;padding:4px 9px;border-radius:8px;color:#fff}
 #fileInput{display:none}
 .preview{margin-top:6px;display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.09)}
+.preview[hidden],.preview.hidden{display:none}
 .prev-head{display:flex;justify-content:space-between;font-size:13px;color:var(--txt-dim)}
 .prev-list{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
 .pv{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.05)}
@@ -1347,8 +1348,16 @@ window.__SINGLE_FILE__ = true;
   $('#cycUndo').addEventListener('click', () => { cycleSeq.pop(); renderCycSeq(); });
   $('#cycClear').addEventListener('click', () => {
     cycleSeq = []; renderCycSeq();
-    importBuffer = []; importPreviewMode = null;
-    $('#importPreview').hidden = true; $('#prevList').innerHTML = ''; $('#prevCount').textContent = '0 天';
+    importBuffer = []; importPreviewMode = null; pendingImport = null;
+    const pv = $('#importPreview');
+    if (pv && !pv.hidden) {
+      pv.hidden = true;
+      $('#prevList').innerHTML = '';
+      $('#prevCount').textContent = '0 天';
+      toast('已清空循环顺序和预览');
+    } else {
+      toast('已清空循环顺序');
+    }
   });
   $('#btnCycGen').addEventListener('click', () => {
     if (!cycleSeq.length) { toast('先添加循环顺序'); return; }

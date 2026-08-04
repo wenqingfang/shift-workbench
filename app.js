@@ -710,8 +710,16 @@
   $('#cycUndo').addEventListener('click', () => { cycleSeq.pop(); renderCycSeq(); });
   $('#cycClear').addEventListener('click', () => {
     cycleSeq = []; renderCycSeq();
-    importBuffer = []; importPreviewMode = null;
-    $('#importPreview').hidden = true; $('#prevList').innerHTML = ''; $('#prevCount').textContent = '0 天';
+    importBuffer = []; importPreviewMode = null; pendingImport = null;
+    const pv = $('#importPreview');
+    if (pv && !pv.hidden) {
+      pv.hidden = true;
+      $('#prevList').innerHTML = '';
+      $('#prevCount').textContent = '0 天';
+      toast('已清空循环顺序和预览');
+    } else {
+      toast('已清空循环顺序');
+    }
   });
   $('#btnCycGen').addEventListener('click', () => {
     if (!cycleSeq.length) { toast('先添加循环顺序'); return; }
