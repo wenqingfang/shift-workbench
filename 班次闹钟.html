@@ -690,7 +690,11 @@ window.__SINGLE_FILE__ = true;
               <option value="sunset">日落橙</option>
               <option value="ocean">深海蓝</option>
               <option value="mono">石墨灰</option>
+              <option value="custom">自定义</option>
             </select>
+          </div>
+          <div class="field-inline" id="themeCustomRow" style="display:none"><label>自定义色</label>
+            <input type="color" id="themeCustom" value="#7c5cff">
           </div>
           <div class="field-inline"><label>背景色</label>
             <select id="bgSel" class="sel">
@@ -939,7 +943,8 @@ window.__SINGLE_FILE__ = true;
   /* ---------- 默认数据 ---------- */
   const DEFAULT = {
     leadMinutes: 60,
-    theme: 'aurora',       // aurora / sunset / ocean / mono
+    theme: 'aurora',       // aurora / sunset / ocean / mono / custom
+    themeCustom: '#7c5cff',// 自定义主题色（取色器选中的主色）
     bgColor: 'aurora',     // aurora / ocean / sunset / mint / rose / black / custom
     bgCustom: '#0a0717',   // 自定义背景色
     fontScale: 1,          // 字号缩放已下线，保留 1 兼容旧备份
@@ -1025,6 +1030,45 @@ window.__SINGLE_FILE__ = true;
     const h = hex.replace('#', '');
     const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
     return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  /* 由自定义主色生成渐变第二段：转 HSL 后旋转色相，保证饱和度/亮度都在好看区间 */
+  function hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if (max === min) { h = s = 0; }
+    else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        default: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return { h: h * 360, s: s * 100, l: l * 100 };
+  }
+  function hslToHex(h, s, l) {
+    h /= 360; s /= 100; l /= 100;
+    const k = (n) => (n + h * 12) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    const to = (x) => Math.round(x * 255).toString(16).padStart(2, '0');
+    return '#' + to(f(0)) + to(f(8)) + to(f(4));
+  }
+  function rotateHue(hex, deg) {
+    const { r, g, b } = hexToRgb(hex || '#7c5cff');
+    const hsl = rgbToHsl(r, g, b);
+    let h = (hsl.h + deg) % 360; if (h < 0) h += 360;
+    const s = Math.max(58, Math.min(92, hsl.s));
+    const l = Math.max(46, Math.min(62, hsl.l));
+    return hslToHex(h, s, l);
   }
 
   /* ================= 渲染：Hero ================= */
@@ -1516,6 +1560,16 @@ window.__SINGLE_FILE__ = true;
     root.setAttribute('data-theme', S.theme || 'aurora');
     root.setAttribute('data-mode', 'dark');
     root.style.setProperty('--font-scale', (S.fontScale || 1));
+    // 自定义主题色：以内联方式覆盖 --grad / --grad-soft；非自定义时清掉内联，回退样式表
+    if (S.theme === 'custom') {
+      const base = S.themeCustom || '#7c5cff';
+      const second = rotateHue(base, 38);
+      root.style.setProperty('--grad', 'linear-gradient(135deg,' + base + ' 0%,' + second + ' 100%)');
+      root.style.setProperty('--grad-soft', 'linear-gradient(135deg,' + hex2rgba(base, .92) + ',' + hex2rgba(second, .88) + ')');
+    } else {
+      root.style.removeProperty('--grad');
+      root.style.removeProperty('--grad-soft');
+    }
     applyBgColor();
     renderHomeCards();
   }
@@ -1598,6 +1652,8 @@ window.__SINGLE_FILE__ = true;
 
     // 外观
     const themeSel = $('#themeSel'); if (themeSel) themeSel.value = S.theme || 'aurora';
+    const themeCustom = $('#themeCustom'); if (themeCustom) themeCustom.value = S.themeCustom || '#7c5cff';
+    const themeCustomRow = $('#themeCustomRow'); if (themeCustomRow) themeCustomRow.style.display = (S.theme === 'custom') ? 'flex' : 'none';
     const bgSel = $('#bgSel'); if (bgSel) bgSel.value = S.bgColor || 'aurora';
     const bgCustom = $('#bgCustom'); if (bgCustom) bgCustom.value = S.bgCustom || '#080a16';
     const bgCustomRow = $('#bgCustomRow'); if (bgCustomRow) bgCustomRow.style.display = (S.bgColor === 'custom') ? 'flex' : 'none';
@@ -1709,7 +1765,14 @@ window.__SINGLE_FILE__ = true;
     save(); renderHero(); renderAlarmList();
   });
   const themeSel = $('#themeSel');
-  if (themeSel) themeSel.addEventListener('change', () => { S.theme = themeSel.value; save(); applyAppearance(); });
+  if (themeSel) themeSel.addEventListener('change', () => {
+    S.theme = themeSel.value;
+    const themeCustomRow = $('#themeCustomRow');
+    if (themeCustomRow) themeCustomRow.style.display = (S.theme === 'custom') ? 'flex' : 'none';
+    save(); applyAppearance();
+  });
+  const themeCustom = $('#themeCustom');
+  if (themeCustom) themeCustom.addEventListener('input', () => { S.themeCustom = themeCustom.value; save(); applyAppearance(); });
   const bgSel = $('#bgSel');
   if (bgSel) bgSel.addEventListener('change', () => {
     S.bgColor = bgSel.value;
@@ -2494,7 +2557,7 @@ window.__SINGLE_FILE__ = true;
     { t: '四、闹钟与提醒', h: '<p>「设置」里调<b>提前多久响</b>。网页会在上班前提醒，但<b>锁屏后 iOS 会挂起页面</b>，睡眠场景不靠谱。</p><p>要锁屏也持续响，用排班页<b>「一键添加闹钟」</b>把排班写进 iPhone「提醒事项」（捷径先删当前班表旧提醒、再添加）。装捷径见「设置 → 换手机」。</p>' },
     { t: '五、多套班表', h: '<p>排班页顶部「班表」可切换<b>本班 / 替班 / 培训</b>等多套；点 ＋ 新建、⚙ 管理（改名 / 删除）。每套独立保存。</p><p>每套班表的提醒带独立前缀（如 <code>【班次闹钟·本班】</code>），导入某班表时捷径只删该班表旧提醒，互不误删。</p>' },
     { t: '六、本月统计与周报', h: '<p>排班页「本月统计」卡自动算出<b>上班天数 / 休息天数 / 总工时</b>及各班次天数分布（翻月刷新）。</p><p>点「🖼️ 导出本周排班图片」可生成本周图，直接发班组群。</p>' },
-    { t: '七、外观与背景', h: '<p>「设置 → 外观」可选<b>主题色</b>与<b>背景色</b>（紫 / 蓝 / 橙 / 绿 / 粉 / 黑）。背景色切换时整页光晕会明显变化。</p>' },
+    { t: '七、外观与背景', h: '<p>「设置 → 外观」可选<b>主题色</b>与<b>背景色</b>。主题色有 极光紫 / 日落橙 / 深海蓝 / 石墨灰 四套预设，也能选「自定义」用取色器挑任意颜色（会自动生成渐变，用于按钮、强调条等）。背景色有 紫 / 蓝 / 橙 / 绿 / 粉 / 黑 及「自定义」，切换时整页光晕会明显变化。</p>' },
     { t: '八、备份与还原', h: '<p>「设置 → 数据」里<b>导出备份</b>存一份 JSON；换新手机用<b>导入备份</b>还原，排班不丢。</p><p>「彻底清除缓存」会重置全部数据，慎用。</p>' },
     { t: '九、把它当 App 用', h: '<p>iPhone Safari：点底部「分享」→「添加到主屏幕」。之后桌面多一个图标，点开即用，离线也能跑。</p>' }
   ];
