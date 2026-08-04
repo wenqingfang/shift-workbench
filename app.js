@@ -13,9 +13,8 @@
   const DEFAULT = {
     leadMinutes: 60,
     theme: 'aurora',       // aurora / sunset / ocean / mono
-    darkMode: true,
-    bgColor: 'aurora',     // aurora / midnight / forest / dark / custom
-    bgCustom: '#080a16',   // 自定义背景色
+    bgColor: 'aurora',     // aurora / ocean / sunset / mint / rose / black / custom
+    bgCustom: '#0a0717',   // 自定义背景色
     fontScale: 1,          // 字号缩放已下线，保留 1 兼容旧备份
     homeCards: ['hero', 'weather', 'tips'], // 首页卡片顺序（hero 始终置顶，weather/tips 可显隐排序）
     templates: [],         // 班表模板 [{ name, seq:[shiftId,...] }]
@@ -109,7 +108,8 @@
 
     const hr = now.getHours();
     const greet = hr < 6 ? '夜深了' : hr < 11 ? '早上好' : hr < 14 ? '中午好' : hr < 19 ? '下午好' : '晚上好';
-    $('#heroGreet').textContent = greet;
+    const emo = hr < 6 ? '🌙' : hr < 11 ? '☀️' : hr < 14 ? '🍱' : hr < 19 ? '☕' : '🌆';
+    $('#heroGreet').textContent = emo + ' ' + greet;
 
     const sh = shiftOf(today);
     if (!sh) {
@@ -586,23 +586,26 @@
   function applyAppearance() {
     const root = document.documentElement;
     root.setAttribute('data-theme', S.theme || 'aurora');
-    root.setAttribute('data-mode', S.darkMode === false ? 'light' : 'dark');
+    root.setAttribute('data-mode', 'dark');
     root.style.setProperty('--font-scale', (S.fontScale || 1));
     applyBgColor();
     renderHomeCards();
   }
   function applyBgColor() {
     const root = document.documentElement;
+    // 背景色预设：色调明显差别，光晕饱和度高、面积大，切换一眼可见
     const presets = {
-      aurora:   { bg: '#080a16', a: '#1b1740', b: '#0d2437' },
-      midnight: { bg: '#050818', a: '#0a1a40', b: '#0c2b4d' },
-      forest:   { bg: '#06140f', a: '#0f2f22', b: '#0a241a' },
-      dark:     { bg: '#000000', a: '#111111', b: '#151515' }
+      aurora: { bg: '#0a0717', a: '#3a1d8a', b: '#6d28d9' }, // 极光紫
+      ocean:  { bg: '#04101f', a: '#0c4a6e', b: '#0369a1' }, // 深海蓝
+      sunset: { bg: '#1a0d05', a: '#9a3412', b: '#ea580c' }, // 落日橙
+      mint:   { bg: '#04140e', a: '#047857', b: '#10b981' }, // 薄荷绿
+      rose:   { bg: '#1a0712', a: '#9d174d', b: '#db2777' }, // 玫瑰粉
+      black:  { bg: '#000000', a: '#1a1a1a', b: '#000000' }  // 纯黑
     };
     let p = presets[S.bgColor || 'aurora'];
     let custom = false;
     if (!p && S.bgColor === 'custom') {
-      const hex = S.bgCustom || '#080a16';
+      const hex = S.bgCustom || '#0a0717';
       p = { bg: hex, a: hex, b: hex };
       custom = true;
     }
@@ -610,12 +613,9 @@
     root.style.setProperty('--bg', p.bg);
     const aurora = $('.aurora');
     if (aurora) {
-      if (custom) {
-        aurora.style.background = 'radial-gradient(1200px 700px at 50% -10%,' + hex2rgba(p.a, .55) + ' 0%,transparent 60%),' +
-          'radial-gradient(900px 600px at 100% 100%,' + hex2rgba(p.b, .45) + ' 0%,transparent 60%),' + p.bg;
-      } else {
-        aurora.style.background = '';
-      }
+      // 所有预设都显式铺一层大范围高饱和光晕，差异更明显
+      aurora.style.background = 'radial-gradient(1000px 620px at 18% -8%,' + hex2rgba(p.a, .85) + ' 0%,transparent 58%),' +
+        'radial-gradient(900px 620px at 92% 8%,' + hex2rgba(p.b, .7) + ' 0%,transparent 60%),' + p.bg;
     }
   }
   /** 按 homeCards 顺序重排首页可配置卡片（hero 始终置顶） */
@@ -670,7 +670,6 @@
 
     // 外观
     const themeSel = $('#themeSel'); if (themeSel) themeSel.value = S.theme || 'aurora';
-    const darkToggle = $('#darkToggle'); if (darkToggle) darkToggle.checked = S.darkMode !== false;
     const bgSel = $('#bgSel'); if (bgSel) bgSel.value = S.bgColor || 'aurora';
     const bgCustom = $('#bgCustom'); if (bgCustom) bgCustom.value = S.bgCustom || '#080a16';
     const bgCustomRow = $('#bgCustomRow'); if (bgCustomRow) bgCustomRow.style.display = (S.bgColor === 'custom') ? 'flex' : 'none';
@@ -780,8 +779,6 @@
   });
   const themeSel = $('#themeSel');
   if (themeSel) themeSel.addEventListener('change', () => { S.theme = themeSel.value; save(); applyAppearance(); });
-  const darkToggle = $('#darkToggle');
-  if (darkToggle) darkToggle.addEventListener('change', () => { S.darkMode = darkToggle.checked; save(); applyAppearance(); });
   const bgSel = $('#bgSel');
   if (bgSel) bgSel.addEventListener('change', () => {
     S.bgColor = bgSel.value;
