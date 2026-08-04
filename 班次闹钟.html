@@ -166,14 +166,14 @@ input,textarea,select{font-family:inherit}
 .sheet-mask.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:50;border-radius:28px 28px 0 0;
   padding:8px 16px calc(20px + var(--safe-b));max-width:520px;margin:0 auto;
-  transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,0,1);max-height:82vh;display:flex;flex-direction:column}
+  transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,0,1);max-height:82vh;display:flex;flex-direction:column;overflow:hidden}
 .sheet.on{transform:translateY(0)}
 .sheet.tall{max-height:90vh}
 .sheet-handle{width:38px;height:4px;border-radius:4px;background:rgba(255,255,255,.25);margin:6px auto 10px;flex:0 0 auto}
 .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex:0 0 auto}
 .sheet-head h3{font-size:17px;font-weight:650}
 .ghost-btn{font-size:14px;color:#9ae7ff;padding:4px 8px;font-weight:600}
-.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column;gap:20px;padding-bottom:6px;flex:1;min-height:0}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column;gap:20px;padding-bottom:6px;flex:1;min-height:0;position:relative}
 
 /* 班次选择 */
 .shift-picker{display:grid;grid-template-columns:1fr 1fr;gap:9px;overflow-y:auto}
@@ -507,15 +507,15 @@ window.__SINGLE_FILE__ = true;
         <div class="field">
           <label>使用说明</label>
           <div class="help">
-            <p><b>2 · 把本页当 App 用</b><br>Android Chrome：菜单 → 添加到主屏幕。<br>iPhone Safari：分享 → 添加到主屏幕。<br>之后桌面会多一个图标，点开即用，不需要联网。</p>
-            <p><b>3 · 连点模式</b><br>日历上方选一个班次后开启连点，点日期直接刷班，批量排班很快。</p>
-            <p><b>4 · 换手机 / 清缓存前</b><br>先点「导出备份」存一份 JSON，新设备用「导入备份」还原，排班不会丢。</p>
+            <p><b>1 · 把本页当 App 用</b><br>Android Chrome：菜单 → 添加到主屏幕。<br>iPhone Safari：分享 → 添加到主屏幕。<br>之后桌面会多一个图标，点开即用，不需要联网。</p>
+            <p><b>2 · 连点模式</b><br>日历上方选一个班次后开启连点，点日期直接刷班，批量排班很快。</p>
+            <p><b>3 · 换手机 / 清缓存前</b><br>先点「导出备份」存一份 JSON，新设备用「导入备份」还原，排班不会丢。</p>
           </div>
         </div>
 
         <div class="field">
-          <label>🔄 换手机？一键导入捷径</label>
-          <p class="hint">换新 iPhone 不用重新搭建「批量添加排班提醒」捷径。用 Safari 打开下面链接，点「添加快捷指令」即可（已含完整批量逻辑，名字固定为「批量添加排班提醒」，与一键运行匹配）。若链接失效，找我重新生成。</p>
+          <label>🔄 换手机？一键导入捷径（仅 iPhone 可用）</label>
+          <p class="hint">换新 iPhone 不用重新搭建「批量添加排班提醒」捷径。用 Safari 打开下面链接，点「添加快捷指令」即可（已含完整批量逻辑，名字固定为「批量添加排班提醒」，与一键运行匹配）。若链接失效，请联系开发人员。</p>
           <a class="btn-full grad" href="https://www.icloud.com/shortcuts/cc5c521a47fd43c697472cd65290d8a1" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:block;margin-top:4px">📦 获取「批量添加排班提醒」捷径</a>
         </div>
       </div>
