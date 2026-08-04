@@ -242,6 +242,7 @@
             <p><b>3 · 换手机 / 清缓存前</b><br>先点「导出备份」存一份 JSON，新设备用「导入备份」还原，排班不会丢。</p>
             <p><b>4 · 多套班表</b><br>排班页顶部「班表」可切换本班 / 替班 / 培训等多套排班；点 ＋ 新建、⚙ 管理（改名 / 删除）。每套独立保存，互不干扰。</p>
           </div>
+          <button class="btn-full grad" id="btnManual" style="margin-top:10px;text-decoration:none;text-align:center;display:block">📖 查看完整使用说明书</button>
         </div>
       </div>
     </section>
@@ -373,6 +374,31 @@
     <p id="alarmSub">14:00 下午班</p>
     <div class="alarm-time" id="alarmNow">13:00</div>
     <button class="btn-full grad" id="btnStopAlarm">我醒了，停止响铃</button>
+  </div>
+</div>
+
+<!-- ===== 新手指引 ===== -->
+<div class="onboard-overlay" id="onboardOverlay">
+  <div class="onboard-card glass">
+    <div id="onboardCard"></div>
+    <div class="onboard-foot">
+      <div class="onboard-dots" id="onboardDots"></div>
+      <div class="onboard-btns">
+        <button class="ghost-btn" id="onboardSkip">跳过</button>
+        <button class="btn-full grad" id="onboardNext" style="width:auto;padding:11px 22px">下一步</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 使用说明书 ===== -->
+<div class="manual-overlay" id="manualOverlay">
+  <div class="manual-box glass">
+    <div class="manual-head">
+      <h3>📖 使用说明书</h3>
+      <button class="ghost-btn" id="manualClose">关闭</button>
+    </div>
+    <div class="manual-body" id="manualBody"></div>
   </div>
 </div>
 

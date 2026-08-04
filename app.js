@@ -27,7 +27,8 @@
     schedule: {},          // { 'YYYY-MM-DD': shiftId }（当前激活班表的工作副本）
     profiles: null,        // 多套班表：{ id: { id, name, schedule } }
     activeProfile: 'main', // 当前激活班表 id
-    fired: {}              // { 'YYYY-MM-DD': true } 已响过的闹钟
+    fired: {},             // { 'YYYY-MM-DD': true } 已响过的闹钟
+    onboarded: false       // 是否已看过新手指引
   };
 
   let S = load();
@@ -1552,6 +1553,67 @@
   $('#btnWeekImg').addEventListener('click', exportWeekImage);
   $('#profilesClose').addEventListener('click', closeSheets);
 
+  /* ================= 新手指引 + 使用说明书 ================= */
+  const ONBOARD_STEPS = [
+    { icon: '🏠', title: '先看今天上什么班', text: '首页顶部显示今天的班次和上班 / 闹钟时间。今天没排班也不用慌，会自动算出「下次排班」还有几天。' },
+    { icon: '📅', title: '日历里点几下就排好', text: '到「排班」页，先选一个班次，开启「连点」后点日期直接刷班；也能用「循环生成」一次性铺满一个月。' },
+    { icon: '⏰', title: '让手机准时叫你', text: '「设置」里调好"提前多久响"。想锁屏也响、防睡过头，用「一键添加闹钟」把排班写进 iPhone 提醒事项（需先装好捷径）。' },
+    { icon: '🗂️', title: '多套班表随便切', text: '本班 / 替班 / 培训……顶部「班表」随时切换，每套独立保存、互不干扰。' }
+  ];
+  const MANUAL_SECTIONS = [
+    { t: '一、首页', h: '<p>顶部显示<b>今天的班次</b>和<b>上班 / 闹钟时间</b>；今天没排班会自动显示<b>下次排班</b>还有几天。</p><p>下方还有<b>本周排班条</b>（周一到周日，今天高亮）、天气、节假日贴心提醒。这些卡片在「设置 → 首页显示」里可勾选 / 排序。</p>' },
+    { t: '二、排班', h: '<p>① 选一个班次后，日历上方有「连点」开关，开启后点日期直接刷班，批量排班很快。</p><p>②<b>循环生成</b>：在「循环规则」里排好顺序，一键铺满一个月；还能「保存为模板」下次套用。</p><p>③<b>复制上月排班到本月</b>：调休换班时一键搬运。</p><p>④ 还支持<b>导入文本 / 文件</b>（一行一个日期+班次）。</p>' },
+    { t: '三、班次编辑', h: '<p>「设置 → 班次设置」里可增删班次、改<b>颜色 / 名称 / 上班时间 / 下班时间</b>。</p><p>点 ⧉ 可<b>克隆</b>一个相似班次，改名即可。工时统计按"下班 − 上班"计算，记得把上下班时间都填上。</p>' },
+    { t: '四、闹钟与提醒', h: '<p>「设置」里调<b>提前多久响</b>。网页会在上班前提醒，但<b>锁屏后 iOS 会挂起页面</b>，睡眠场景不靠谱。</p><p>要锁屏也持续响，用排班页<b>「一键添加闹钟」</b>把排班写进 iPhone「提醒事项」（捷径先删当前班表旧提醒、再添加）。装捷径见「设置 → 换手机」。</p>' },
+    { t: '五、多套班表', h: '<p>排班页顶部「班表」可切换<b>本班 / 替班 / 培训</b>等多套；点 ＋ 新建、⚙ 管理（改名 / 删除）。每套独立保存。</p><p>每套班表的提醒带独立前缀（如 <code>【班次闹钟·本班】</code>），导入某班表时捷径只删该班表旧提醒，互不误删。</p>' },
+    { t: '六、本月统计与周报', h: '<p>排班页「本月统计」卡自动算出<b>上班天数 / 休息天数 / 总工时</b>及各班次天数分布（翻月刷新）。</p><p>点「🖼️ 导出本周排班图片」可生成本周图，直接发班组群。</p>' },
+    { t: '七、外观与背景', h: '<p>「设置 → 外观」可选<b>主题色</b>与<b>背景色</b>（紫 / 蓝 / 橙 / 绿 / 粉 / 黑）。背景色切换时整页光晕会明显变化。</p>' },
+    { t: '八、备份与还原', h: '<p>「设置 → 数据」里<b>导出备份</b>存一份 JSON；换新手机用<b>导入备份</b>还原，排班不丢。</p><p>「彻底清除缓存」会重置全部数据，慎用。</p>' },
+    { t: '九、把它当 App 用', h: '<p>iPhone Safari：点底部「分享」→「添加到主屏幕」。之后桌面多一个图标，点开即用，离线也能跑。</p>' }
+  ];
+
+  let obStep = 0;
+  function renderOnboardStep() {
+    const step = ONBOARD_STEPS[obStep];
+    const card = $('#onboardCard');
+    if (card) {
+      card.innerHTML = '<div class="ob-icon">' + step.icon + '</div>' +
+        '<h2 class="ob-title">' + step.title + '</h2>' +
+        '<p class="ob-text">' + step.text + '</p>';
+    }
+    const dots = $('#onboardDots');
+    if (dots) {
+      dots.innerHTML = ONBOARD_STEPS.map((_, i) => '<span class="ob-dot' + (i === obStep ? ' on' : '') + '"></span>').join('');
+    }
+    const next = $('#onboardNext');
+    if (next) next.textContent = (obStep === ONBOARD_STEPS.length - 1) ? '开始使用' : '下一步';
+  }
+  function showOnboarding() {
+    obStep = 0;
+    renderOnboardStep();
+    const ov = $('#onboardOverlay');
+    if (ov) ov.classList.add('on');
+  }
+  function endOnboarding() {
+    const ov = $('#onboardOverlay');
+    if (ov) ov.classList.remove('on');
+    S.onboarded = true; save();
+  }
+  function openManual() {
+    const body = $('#manualBody');
+    if (body) {
+      body.innerHTML = MANUAL_SECTIONS.map((s) =>
+        '<div class="manual-sec"><h3>' + s.t + '</h3>' + s.h + '</div>'
+      ).join('');
+    }
+    const ov = $('#manualOverlay');
+    if (ov) ov.classList.add('on');
+  }
+  function closeManual() {
+    const ov = $('#manualOverlay');
+    if (ov) ov.classList.remove('on');
+  }
+
   /* ================= 启动 ================= */
   function init() {
     const n = new Date();
@@ -1562,6 +1624,7 @@
     renderAll();
     switchView('home');
     fetchWeather();   // 后台刷新天气
+    if (!S.onboarded) showOnboarding();
 
     setInterval(() => { renderHero(); }, 30000);
     document.addEventListener('visibilitychange', () => {
@@ -1577,6 +1640,21 @@
       } catch (e) {}
       document.removeEventListener('touchstart', unlock);
     }, { passive: true });
+
+    // 新手指引 & 说明书
+    const onboardNext = $('#onboardNext');
+    if (onboardNext) onboardNext.addEventListener('click', () => {
+      if (obStep < ONBOARD_STEPS.length - 1) { obStep++; renderOnboardStep(); }
+      else endOnboarding();
+    });
+    const onboardSkip = $('#onboardSkip');
+    if (onboardSkip) onboardSkip.addEventListener('click', endOnboarding);
+    const manualClose = $('#manualClose');
+    if (manualClose) manualClose.addEventListener('click', closeManual);
+    const manualOverlay = $('#manualOverlay');
+    if (manualOverlay) manualOverlay.addEventListener('click', (e) => { if (e.target === manualOverlay) closeManual(); });
+    const btnManual = $('#btnManual');
+    if (btnManual) btnManual.addEventListener('click', openManual);
 
     // 单文件 / file:// 模式下没有 sw.js，也无法注册，直接跳过
     if ('serviceWorker' in navigator &&
