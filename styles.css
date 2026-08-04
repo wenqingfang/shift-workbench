@@ -105,6 +105,8 @@ input,textarea,select{font-family:inherit}
 .hero{border-radius:var(--r-lg);padding:20px 18px 16px;position:relative;overflow:hidden}
 .hero::after{content:"";position:absolute;top:-60%;right:-30%;width:70%;height:180%;background:var(--grad);opacity:.18;filter:blur(40px);pointer-events:none}
 .hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;position:relative}
+.hero-greet{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.hero-greet span:first-child{font-size:12px;color:#fff;background:var(--grad-soft);padding:3px 9px;border-radius:999px;font-weight:600;box-shadow:0 4px 12px rgba(124,92,255,.25)}
 .hero-date{color:var(--txt-dim);font-size:13px;letter-spacing:.5px}
 .hero-shift{font-size:29px;font-weight:700;letter-spacing:-.5px;margin-top:3px;
   background:linear-gradient(120deg,#fff,#cbb8ff 60%,#9ae7ff);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -118,9 +120,20 @@ input,textarea,select{font-family:inherit}
 .mini-label{display:block;font-size:11px;color:var(--txt-dim);letter-spacing:1px}
 .mini-card.accent .mini-label{color:rgba(255,255,255,.85)}
 .mini-value{display:block;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+.mini-card.wide{grid-column:span 1}
+.mini-sub{display:block;font-size:11px;color:var(--txt-dim);margin-top:3px}
 .countdown{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12.5px;color:var(--txt-dim);position:relative}
 .cd-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 10px #4ade80;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* 本周排班小条 */
+.week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
+.ws-day{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06);transition:.15s}
+.ws-day.today{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);box-shadow:0 0 0 1.5px rgba(255,255,255,.15)}
+.ws-l{font-size:10px;color:var(--txt-faint)}
+.ws-d{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.ws-dot{width:5px;height:5px;border-radius:50%;margin:1px 0}
+.ws-s{font-size:9px;color:var(--txt-dim);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ============ 通知条 ============ */
 .notice{border-radius:var(--r-md);padding:12px 14px;display:flex;align-items:center;gap:12px}
@@ -447,6 +460,10 @@ textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
 /* 浅色模式补充 */
 [data-mode="light"] .pchip{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.08);color:var(--txt-dim)}
 [data-mode="light"] .stat-cell,.stat-b,.prow{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
+[data-mode="light"] .week-strip{border-top-color:rgba(0,0,0,.08)}
+[data-mode="light"] .ws-day{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.06)}
+[data-mode="light"] .ws-day.today{background:rgba(0,0,0,.1);border-color:rgba(0,0,0,.2);box-shadow:none}
+[data-mode="light"] .mini-sub{color:var(--txt-dim)}
 
 /* 工时统计说明 / 缺下班时间提示 */
 .stat-cap{font-size:11px;color:var(--txt-faint);line-height:1.55;margin:10px 2px 0}

@@ -14,7 +14,9 @@
     leadMinutes: 60,
     theme: 'aurora',       // aurora / sunset / ocean / mono
     darkMode: true,
-    fontScale: 1,          // 1 / 1.15 / 1.3
+    bgColor: 'aurora',     // aurora / midnight / forest / dark / custom
+    bgCustom: '#080a16',   // 自定义背景色
+    fontScale: 1,          // 字号缩放已下线，保留 1 兼容旧备份
     homeCards: ['hero', 'weather', 'tips'], // 首页卡片顺序（hero 始终置顶，weather/tips 可显隐排序）
     templates: [],         // 班表模板 [{ name, seq:[shiftId,...] }]
     shifts: [
@@ -105,18 +107,90 @@
     const wk = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
     $('#heroDate').textContent = (now.getMonth() + 1) + '月' + now.getDate() + '日 · 星期' + wk;
 
+    const hr = now.getHours();
+    const greet = hr < 6 ? '夜深了' : hr < 11 ? '早上好' : hr < 14 ? '中午好' : hr < 19 ? '下午好' : '晚上好';
+    const emo = hr < 6 ? '🌙' : hr < 11 ? '☀️' : hr < 14 ? '🍱' : hr < 19 ? '☕' : '🌆';
+    $('#heroGreet').textContent = emo + ' ' + greet;
+
     const sh = shiftOf(today);
     if (!sh) {
       $('#heroShift').textContent = '今天未排班';
-      $('#heroStart').textContent = '--:--';
-      $('#heroAlarm').textContent = '--:--';
     } else {
       $('#heroShift').textContent = sh.name;
-      $('#heroStart').textContent = sh.start || '休息';
-      const a = alarmAt(today, sh);
-      $('#heroAlarm').textContent = a ? hhmm(a) : '无';
+    }
+
+    // 下次排班信息：今天未排班时显示下一次有班的日期；今天有班时显示今天的上班/闹钟时间
+    const nextInfo = nextShiftInfo();
+    if (!sh && nextInfo) {
+      $('#heroCards').innerHTML =
+        '<div class="mini-card wide">' +
+          '<span class="mini-label">下次排班</span>' +
+          '<span class="mini-value" style="font-size:20px">' + esc(nextInfo.shift.name) + '</span>' +
+          '<span class="mini-sub">' + nextInfo.label + ' · ' + (nextInfo.shift.start || '休息') + '</span>' +
+        '</div>' +
+        '<div class="mini-card accent">' +
+          '<span class="mini-label">距离</span>' +
+          '<span class="mini-value" style="font-size:20px">' + nextInfo.days + '</span>' +
+          '<span class="mini-sub">天后</span>' +
+        '</div>';
+    } else {
+      $('#heroCards').innerHTML =
+        '<div class="mini-card">' +
+          '<span class="mini-label">上班</span>' +
+          '<span class="mini-value" id="heroStart">' + (sh && sh.start ? sh.start : (sh ? '休息' : '--:--')) + '</span>' +
+        '</div>' +
+        '<div class="mini-card accent">' +
+          '<span class="mini-label">闹钟</span>' +
+          '<span class="mini-value" id="heroAlarm">' + (sh && sh.start && sh.alarm ? hhmm(alarmAt(today, sh)) : '无') + '</span>' +
+        '</div>';
     }
     renderCountdown();
+    renderWeekStrip();
+  }
+
+  /** 下一次有排班的日期信息（从明天开始找 60 天） */
+  function nextShiftInfo() {
+    const now = new Date();
+    const today = ymd(now);
+    for (let i = 1; i <= 60; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      const key = ymd(d);
+      const sh = shiftOf(key);
+      if (sh) {
+        const days = i;
+        let label;
+        if (i === 1) label = '明天';
+        else if (i === 2) label = '后天';
+        else label = (d.getMonth() + 1) + '月' + d.getDate() + '日';
+        return { key: key, date: d, shift: sh, days: days, label: label };
+      }
+    }
+    return null;
+  }
+
+  /** 首页 hero 内的本周排班小条（周一到周日） */
+  function renderWeekStrip() {
+    const box = $('#weekStrip');
+    if (!box) return;
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7;
+    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+    let html = '';
+    const labels = ['一', '二', '三', '四', '五', '六', '日'];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
+      const key = ymd(d);
+      const sh = shiftOf(key);
+      const isToday = key === ymd(now);
+      html +=
+        '<div class="ws-day' + (isToday ? ' today' : '') + '" title="' + (d.getMonth() + 1) + '/' + d.getDate() + '">' +
+          '<span class="ws-l">' + labels[i] + '</span>' +
+          '<span class="ws-d">' + d.getDate() + '</span>' +
+          '<span class="ws-dot" style="background:' + (sh ? sh.color : 'transparent') + '"></span>' +
+          '<span class="ws-s">' + (sh ? sh.name : '') + '</span>' +
+        '</div>';
+    }
+    box.innerHTML = html;
   }
 
   function renderCountdown() {
@@ -515,7 +589,35 @@
     root.setAttribute('data-theme', S.theme || 'aurora');
     root.setAttribute('data-mode', S.darkMode === false ? 'light' : 'dark');
     root.style.setProperty('--font-scale', (S.fontScale || 1));
+    applyBgColor();
     renderHomeCards();
+  }
+  function applyBgColor() {
+    const root = document.documentElement;
+    const presets = {
+      aurora:   { bg: '#080a16', a: '#1b1740', b: '#0d2437' },
+      midnight: { bg: '#050818', a: '#0a1a40', b: '#0c2b4d' },
+      forest:   { bg: '#06140f', a: '#0f2f22', b: '#0a241a' },
+      dark:     { bg: '#000000', a: '#111111', b: '#151515' }
+    };
+    let p = presets[S.bgColor || 'aurora'];
+    let custom = false;
+    if (!p && S.bgColor === 'custom') {
+      const hex = S.bgCustom || '#080a16';
+      p = { bg: hex, a: hex, b: hex };
+      custom = true;
+    }
+    if (!p) p = presets.aurora;
+    root.style.setProperty('--bg', p.bg);
+    const aurora = $('.aurora');
+    if (aurora) {
+      if (custom) {
+        aurora.style.background = 'radial-gradient(1200px 700px at 50% -10%,' + hex2rgba(p.a, .55) + ' 0%,transparent 60%),' +
+          'radial-gradient(900px 600px at 100% 100%,' + hex2rgba(p.b, .45) + ' 0%,transparent 60%),' + p.bg;
+      } else {
+        aurora.style.background = '';
+      }
+    }
   }
   /** 按 homeCards 顺序重排首页可配置卡片（hero 始终置顶） */
   function renderHomeCards() {
@@ -570,7 +672,9 @@
     // 外观
     const themeSel = $('#themeSel'); if (themeSel) themeSel.value = S.theme || 'aurora';
     const darkToggle = $('#darkToggle'); if (darkToggle) darkToggle.checked = S.darkMode !== false;
-    const fontSel = $('#fontSel'); if (fontSel) fontSel.value = String(S.fontScale || 1);
+    const bgSel = $('#bgSel'); if (bgSel) bgSel.value = S.bgColor || 'aurora';
+    const bgCustom = $('#bgCustom'); if (bgCustom) bgCustom.value = S.bgCustom || '#080a16';
+    const bgCustomRow = $('#bgCustomRow'); if (bgCustomRow) bgCustomRow.style.display = (S.bgColor === 'custom') ? 'flex' : 'none';
     renderHomeCardsEditor();
 
     const box = $('#shiftEditor');
@@ -679,8 +783,15 @@
   if (themeSel) themeSel.addEventListener('change', () => { S.theme = themeSel.value; save(); applyAppearance(); });
   const darkToggle = $('#darkToggle');
   if (darkToggle) darkToggle.addEventListener('change', () => { S.darkMode = darkToggle.checked; save(); applyAppearance(); });
-  const fontSel = $('#fontSel');
-  if (fontSel) fontSel.addEventListener('change', () => { S.fontScale = +fontSel.value; save(); applyAppearance(); });
+  const bgSel = $('#bgSel');
+  if (bgSel) bgSel.addEventListener('change', () => {
+    S.bgColor = bgSel.value;
+    const bgCustomRow = $('#bgCustomRow');
+    if (bgCustomRow) bgCustomRow.style.display = (S.bgColor === 'custom') ? 'flex' : 'none';
+    save(); applyAppearance();
+  });
+  const bgCustom = $('#bgCustom');
+  if (bgCustom) bgCustom.addEventListener('input', () => { S.bgCustom = bgCustom.value; save(); applyAppearance(); });
 
   $('#btnAddShift').addEventListener('click', () => {
     const colors = ['#34d399', '#fb7185', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'];
