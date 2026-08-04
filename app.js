@@ -989,18 +989,6 @@
     return lines.join('\n');
   }
 
-  function copyRemindersList() {
-    const text = buildRemindersList();
-    if (!text) { toast('还没有可生成的提醒事项'); return; }
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text)
-        .then(() => toast('已复制 ' + text.split('\n').length + ' 条提醒清单'))
-        .catch(() => fallbackCopy(text));
-    } else {
-      fallbackCopy(text);
-    }
-  }
-
   function fallbackCopy(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -1011,18 +999,6 @@
     try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
     ta.remove();
     toast(ok ? '已复制 ' + text.split('\n').length + ' 条提醒清单' : '复制失败，请用「下载清单」方式');
-  }
-
-  function downloadRemindersList() {
-    const text = buildRemindersList();
-    if (!text) { toast('还没有可生成的提醒事项'); return; }
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = '班次提醒清单.txt';
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-    toast('已下载清单 · 按下方步骤在「快捷指令」App 运行一次即可全部添加');
   }
 
   function runBatchShortcut() {
@@ -1051,8 +1027,6 @@
   }
 
   $('#btnRunRemindersShortcut').addEventListener('click', runBatchShortcut);
-  $('#btnCopyReminders').addEventListener('click', copyRemindersList);
-  $('#btnDownloadReminders').addEventListener('click', downloadRemindersList);
 
   function scheduleNextAlarm() {
     clearTimeout(alarmTimer);

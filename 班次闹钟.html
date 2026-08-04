@@ -173,7 +173,9 @@ input,textarea,select{font-family:inherit}
 .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex:0 0 auto}
 .sheet-head h3{font-size:17px;font-weight:650}
 .ghost-btn{font-size:14px;color:#9ae7ff;padding:4px 8px;font-weight:600}
-.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column;gap:20px;padding-bottom:6px;flex:1;min-height:0;position:relative}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:block;padding-bottom:6px;flex:1;min-height:0;position:relative}
+.sheet-body>*{margin-bottom:20px}
+.sheet-body>:last-child{margin-bottom:0}
 
 /* 班次选择 */
 .shift-picker{display:grid;grid-template-columns:1fr 1fr;gap:9px;overflow-y:auto}
@@ -604,22 +606,18 @@ window.__SINGLE_FILE__ = true;
 </div>
 
 
-<!-- ===== 抽屉：iPhone 提醒事项 / 系统闹钟 ===== -->
+<!-- ===== 抽屉：一键添加闹钟 ===== -->
 <div class="sheet glass tall" id="sheetClock">
   <div class="sheet-handle"></div>
   <div class="sheet-head">
-    <h3>iPhone 提醒事项 / 系统闹钟</h3>
+    <h3>一键添加闹钟</h3>
     <button class="ghost-btn" id="clockClose">关闭</button>
   </div>
   <div class="sheet-body">
-    <button class="btn-full grad" id="btnRunRemindersShortcut" style="margin-bottom:12px">
-      <span class="btn-icon">⚡</span>一键运行「批量添加排班提醒」
+    <button class="btn-full grad" id="btnRunRemindersShortcut">
+      <span class="btn-icon">⚡</span>一键添加闹钟
       <small>自动复制清单并唤起快捷指令</small>
     </button>
-    <div class="btn-row" style="margin-bottom:12px">
-      <button class="btn-full" id="btnCopyReminders" style="flex:1">📋 复制快捷指令清单</button>
-      <button class="btn-full" id="btnDownloadReminders" style="flex:1">💾 下载 .txt 清单</button>
-    </div>
   </div>
 </div>
 
@@ -1628,18 +1626,6 @@ window.__SINGLE_FILE__ = true;
     return lines.join('\n');
   }
 
-  function copyRemindersList() {
-    const text = buildRemindersList();
-    if (!text) { toast('还没有可生成的提醒事项'); return; }
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text)
-        .then(() => toast('已复制 ' + text.split('\n').length + ' 条提醒清单'))
-        .catch(() => fallbackCopy(text));
-    } else {
-      fallbackCopy(text);
-    }
-  }
-
   function fallbackCopy(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -1650,18 +1636,6 @@ window.__SINGLE_FILE__ = true;
     try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
     ta.remove();
     toast(ok ? '已复制 ' + text.split('\n').length + ' 条提醒清单' : '复制失败，请用「下载清单」方式');
-  }
-
-  function downloadRemindersList() {
-    const text = buildRemindersList();
-    if (!text) { toast('还没有可生成的提醒事项'); return; }
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = '班次提醒清单.txt';
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-    toast('已下载清单 · 按下方步骤在「快捷指令」App 运行一次即可全部添加');
   }
 
   function runBatchShortcut() {
@@ -1690,8 +1664,6 @@ window.__SINGLE_FILE__ = true;
   }
 
   $('#btnRunRemindersShortcut').addEventListener('click', runBatchShortcut);
-  $('#btnCopyReminders').addEventListener('click', copyRemindersList);
-  $('#btnDownloadReminders').addEventListener('click', downloadRemindersList);
 
   function scheduleNextAlarm() {
     clearTimeout(alarmTimer);
