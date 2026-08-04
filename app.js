@@ -518,9 +518,6 @@
     $('#leadRange').value = S.leadMinutes;
     $('#leadVal').textContent = S.leadMinutes + ' 分钟';
     $('#leadExample').textContent = minusLead('14:00');
-    $('#helpLead').textContent = S.leadMinutes;
-    $('#multiAlarm').checked = S.multiAlarm !== false;
-    $('#ringTone').value = S.ringTone || 'default';
 
     const box = $('#shiftEditor');
     box.innerHTML = '';
@@ -566,17 +563,7 @@
     S.leadMinutes = +e.target.value;
     $('#leadVal').textContent = S.leadMinutes + ' 分钟';
     $('#leadExample').textContent = minusLead('14:00');
-    $('#helpLead').textContent = S.leadMinutes;
     save(); renderHero(); renderAlarmList();
-  });
-  $('#multiAlarm').addEventListener('change', (e) => {
-    S.multiAlarm = e.target.checked; save();
-    toast('已' + (e.target.checked ? '开启' : '关闭') + '「到点前多次提醒」');
-  });
-  $('#ringTone').addEventListener('change', (e) => {
-    S.ringTone = e.target.value; save();
-    beep(); // 立即试听
-    toast('已切换铃声，可点「测试闹钟」试听');
   });
   $('#btnAddShift').addEventListener('click', () => {
     const colors = ['#34d399', '#fb7185', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'];
@@ -818,223 +805,6 @@
     while (rest.length) { out += '\r\n ' + rest.slice(0, 73); rest = rest.slice(73); }
     return out;
   }
-  // 只生成「提醒事项」(VTODO)。日历(VEVENT)通道已移除。
-  // 采用 Apple 原生格式：UTC 时间 + Apple PRODID + 标准字段，最大限度兼容 iOS 提醒事项。
-  function buildICS() {
-    const L = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Apple Inc.//iPhone OS 16.0//EN',
-      'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'
-    ];
-    const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-    let count = 0;
-    Object.keys(S.schedule).sort().forEach((key) => {
-      const sh = shiftOf(key);
-      if (!sh || !sh.start) return;
-      const d = parseYmd(key);
-      if (d < from) return;
-      const st = startAt(key, sh);
-      count++;
-      const due = sh.alarm ? alarmAt(key, sh) : st;   // 到期 = 闹钟时间（提前 lead 分钟）
-      const created = icsStamp();
-      L.push('BEGIN:VTODO');
-      L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
-      L.push('DTSTAMP:' + created);
-      L.push('CREATED:' + created);
-      L.push('LAST-MODIFIED:' + created);
-      // Apple 原生用 UTC（Z 后缀），避免 floating/TZID 解析不一致导致时间丢失
-      const dueStamp = icsTimeUTC(due);
-      L.push('DTSTART:' + dueStamp);
-      L.push('DUE:' + dueStamp);
-      L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班 · 准备'));
-      L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
-      L.push('PRIORITY:1');
-      L.push('STATUS:NEEDS-ACTION');
-      // 单条 VALARM：到期即响
-      L.push('BEGIN:VALARM');
-      L.push('ACTION:DISPLAY');
-      L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
-      L.push('TRIGGER:PT0S');
-      L.push('END:VALARM');
-      L.push('END:VTODO');
-    });
-    L.push('END:VCALENDAR');
-    return { text: L.join('\r\n'), count: count };
-  }
-
-  // 生成单天的 .ics（仅一条 VTODO），作为「邮件附件打开」的兜底尝试。
-  function buildOneICS(key, sh) {
-    const L = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Apple Inc.//iPhone OS 16.0//EN',
-      'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'
-    ];
-    const st = startAt(key, sh);
-    const due = sh.alarm ? alarmAt(key, sh) : st;
-    const created = icsStamp();
-    L.push('BEGIN:VTODO');
-    L.push('UID:sw-' + key + '-' + sh.id + '@shift.local');
-    L.push('DTSTAMP:' + created);
-    L.push('CREATED:' + created);
-    L.push('LAST-MODIFIED:' + created);
-    const dueStamp = icsTimeUTC(due);
-    L.push('DTSTART:' + dueStamp);
-    L.push('DUE:' + dueStamp);
-    L.push(fold('SUMMARY:' + sh.name + ' ' + sh.start + ' 上班 · 准备'));
-    L.push(fold('DESCRIPTION:提前 ' + S.leadMinutes + " 分钟提醒\\n由班次闹钟工作台生成"));
-    L.push('PRIORITY:1');
-    L.push('STATUS:NEEDS-ACTION');
-    L.push('BEGIN:VALARM');
-    L.push('ACTION:DISPLAY');
-    L.push(fold('DESCRIPTION:该准备上班了 · ' + sh.name + ' ' + sh.start));
-    L.push('TRIGGER:PT0S');
-    L.push('END:VALARM');
-    L.push('END:VTODO');
-    L.push('END:VCALENDAR');
-    return L.join('\r\n');
-  }
-
-  function shareEachDay() {
-    if (!navigator.share || !window.File) { toast('当前环境不支持系统分享'); return; }
-    const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-    const files = [];
-    Object.keys(S.schedule).sort().forEach((key) => {
-      const sh = shiftOf(key);
-      if (!sh || !sh.start) return;
-      const d = parseYmd(key);
-      if (d < from) return;
-      files.push(new File([buildOneICS(key, sh)], '排班-' + key + '.ics', { type: ICS_TYPE }));
-    });
-    if (!files.length) { toast('还没有可导出的排班'); return; }
-    navigator.share({ files: files, title: '逐日排班提醒' })
-      .then(() => toast(files.length > 1 ? '逐个选「提醒事项」导入即可' : '请选「提醒事项」导入'))
-      .catch((err) => { if (err && err.name !== 'AbortError') toast('分享失败，请换其他方式'); });
-  }
-
-  /* ================= 导出：提醒事项（.ics / VTODO） ================= */
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const ICS_FILE = '我的排班闹钟.ics';
-  const ICS_TYPE = 'text/calendar';
-  let currentIcs = null;     // 当前打开导出菜单时对应的 ICS 数据
-
-  function exportIcs() {
-    const r = buildICS();
-    if (!r.count) { toast('还没有可导出的排班'); return; }
-    currentIcs = r;
-    $('#icsCount').textContent = r.count + ' 天';
-    $('#icsText').value = r.text;
-    $('#exportMenu').hidden = false;
-    $('#copyArea').hidden = true;
-    $('#icsKindHint').textContent =
-      '文件里每条提醒都带「具体日期＋时间」（＝你设置的提前量对应的闹钟时间），格式已按 Apple 原生 .ics（UTC + PRODID）输出。若 iOS 能正常导入，点该条 → 信息(i) → 打开「紧急」，日期和时间就是你文件里的，不用手填。';
-    // iPhone 通过「分享/文件」打开 .ics 到提醒事项时，系统经常只解析一条，甚至仅把文件当附件。
-    // 这是 iOS 限制，不是文件格式问题。最稳的批量方案见「iPhone 提醒事项 / 系统闹钟」抽屉。
-    $('#icsMultiHint').textContent = r.count > 1
-      ? '⚠️ iPhone 直接导入 .ics 到「提醒事项」通常只能得到一条，或只把文件当附件（你截图就是这种情况）。想一次导入 ' + r.count + ' 天，请关闭这个抽屉，点「iPhone 提醒事项 / 系统闹钟」里的「⚡ 一键运行批量添加排班提醒」。'
-      : '';
-    openSheet('#sheetIcs');
-  }
-
-  $('#btnExport').addEventListener('click', () => exportIcs());
-
-  // 1) Web Share 文件分享
-  function shareIcs() {
-    if (!currentIcs) return;
-    const r = currentIcs;
-    if (!navigator.share || !window.File) { toast('当前环境不支持系统分享'); return; }
-    try {
-      const file = new File([r.text], ICS_FILE, { type: ICS_TYPE });
-      navigator.share({ files: [file], title: '我的排班提醒' })
-        .then(() => toast('请选择「提醒事项」导入'))
-        .catch((err) => {
-          if (err && err.name === 'AbortError') return;
-          toast('分享失败，请换其他方式');
-        });
-    } catch (e) { toast('分享失败，请换其他方式'); }
-  }
-
-  // 2) 在日历 App 中打开：data URI 跳转（iOS 点击后通常会询问是否导入日历）
-  function openIcsInCalendar() {
-    if (!currentIcs) return;
-    const r = currentIcs;
-    try {
-      const b64 = btoa(unescape(encodeURIComponent(r.text)));
-      const uri = 'data:' + ICS_TYPE + ';base64,' + b64;
-
-      // PWA 模式下 window.open 容易覆盖当前页，用 iframe 保留当前页
-      if (window.navigator.standalone === true) {
-        const iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;';
-        iframe.src = uri;
-        document.body.appendChild(iframe);
-        setTimeout(() => iframe.remove(), 4000);
-        toast('若未自动跳转，请点 Safari 顶部地址栏查看');
-        return;
-      }
-      // Safari 普通标签页
-      const a = document.createElement('a');
-      a.href = uri; a.target = '_blank';
-      document.body.appendChild(a); a.click();
-      setTimeout(() => a.remove(), 500);
-      toast('请在弹窗选择「提醒事项」导入');
-    } catch (e) {
-      toast('无法直接打开，请用「保存到文件」方式');
-    }
-  }
-
-  // 3) 保存到「文件」App：下载 .ics 文件
-  function saveIcsToFiles() {
-    if (!currentIcs) return;
-    const r = currentIcs;
-    try {
-      const a = document.createElement('a');
-      if (typeof a.download === 'undefined') throw new Error('no download');
-      const blob = new Blob([r.text], { type: ICS_TYPE + ';charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      a.href = url; a.download = ICS_FILE;
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-      toast('已保存 · 在「文件」App 点击该 .ics 即可导入提醒事项');
-    } catch (e) {
-      toast('当前环境不支持下载，请复制全文');
-    }
-  }
-
-  // 4) 复制全文
-  function copyIcs() {
-    if (!currentIcs) return;
-    const r = currentIcs;
-    $('#exportMenu').hidden = true;
-    $('#copyArea').hidden = false;
-    const ta = $('#icsText');
-    ta.value = r.text;
-    // 自动选中并复制
-    setTimeout(() => {
-      ta.select();
-      ta.setSelectionRange(0, ta.value.length);
-      let ok = false;
-      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-      if (!ok && navigator.clipboard) {
-        navigator.clipboard.writeText(ta.value)
-          .then(() => toast('已复制 · 存成 .ics 后用「提醒事项」打开'))
-          .catch(() => toast('请手动长按文本框选择复制'));
-        return;
-      }
-      toast(ok ? '已复制 · 存成 .ics 后用「提醒事项」打开' : '请手动长按文本框选择复制');
-    }, 50);
-  }
-
-  $('#icsClose').addEventListener('click', closeSheets);
-  $('#btnShareIcs').addEventListener('click', shareIcs);
-  $('#btnOpenIcs').addEventListener('click', openIcsInCalendar);
-  $('#btnSaveIcs').addEventListener('click', saveIcsToFiles);
-  $('#btnCopyIcs').addEventListener('click', copyIcs);
-  $('#btnShareEach').addEventListener('click', shareEachDay);
-  $('#btnBackToMenu').addEventListener('click', () => {
-    $('#exportMenu').hidden = false;
-    $('#copyArea').hidden = true;
-  });
 
   function download(name, content, type) {
     try {
@@ -1187,66 +957,8 @@
     $('#alarmOverlay').classList.remove('on');
     stopRinging();
   });
-  $('#btnTest').addEventListener('click', () => {
-    const sh = S.shifts.find((s) => s.start) || { name: '示例班次', start: '14:00' };
-    fireAlarm({ key: 'test', shift: sh });
-  });
-
-  /* ================= iPhone 系统闹钟清单 ================= */
-  function clockAlarmItems() {
-    return upcomingAlarms(30).map((it) => {
-      const wk = ['日', '一', '二', '三', '四', '五', '六'][it.date.getDay()];
-      const dLabel = (it.date.getMonth() + 1) + '月' + it.date.getDate() + '日 周' + wk;
-      return { dLabel: dLabel, name: it.shift.name, start: it.shift.start, alarm: hhmm(it.time) };
-    });
-  }
-  function buildClockListText() {
-    const items = clockAlarmItems();
-    if (!items.length) return null;
-    const lines = ['建议把下面每个时间加到 iPhone 自带「时钟」App（可自定义铃声、锁屏持续响）：', ''];
-    items.forEach((it, i) => lines.push((i + 1) + '. ' + it.dLabel + ' · ' + it.name + ' ' + it.start + ' 上班 → 闹钟 ' + it.alarm));
-    return { text: lines.join('\n'), count: items.length };
-  }
-  function renderClockList() {
-    const items = clockAlarmItems();
-    const box = $('#clockList');
-    if (!items.length) { box.innerHTML = '<p class="empty-txt">还没有安排闹钟<br>先去日历排好班</p>'; return; }
-    box.innerHTML = '';
-    items.forEach((it) => {
-      const el = document.createElement('div');
-      el.className = 'cl';
-      el.innerHTML = '<span class="cl-bar"></span>' +
-        '<span class="cl-main"><span class="cl-d">' + it.dLabel + '</span>' +
-        '<span class="cl-s">' + esc(it.name) + ' ' + it.start + ' 上班</span></span>' +
-        '<span class="cl-t"><b>' + it.alarm + '</b><small>设闹钟</small></span>';
-      box.appendChild(el);
-    });
-  }
-  function fallbackCopy(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; ta.style.top = '-9999px';
-    document.body.appendChild(ta); ta.select();
-    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
-    ta.remove();
-    toast(ok ? '已复制闹钟清单' : '请手动长按复制');
-  }
-  $('#btnClock').addEventListener('click', () => { renderClockList(); openSheet('#sheetClock'); });
+  $('#btnClock').addEventListener('click', () => { openSheet('#sheetClock'); });
   $('#clockClose').addEventListener('click', closeSheets);
-  $('#btnCopyClock').addEventListener('click', () => {
-    const r = buildClockListText();
-    if (!r) { toast('还没有可复制的闹钟'); return; }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(r.text).then(() => toast('已复制 ' + r.count + ' 个闹钟时间')).catch(() => fallbackCopy(r.text));
-    } else fallbackCopy(r.text);
-  });
-  $('#btnOpenClock').addEventListener('click', () => {
-    const a = document.createElement('a');
-    a.href = 'clock://'; a.style.display = 'none';
-    document.body.appendChild(a);
-    try { a.click(); } catch (e) {}
-    setTimeout(() => a.remove(), 600);
-    toast('已尝试打开「时钟」App，没反应就手动打开并逐个加');
-  });
 
   /* ================= 一键加闹钟快捷指令（.shortcut） =================
      iOS「创建闹钟」动作只能设置时间（HH:MM），不能指定具体日期，
@@ -1361,20 +1073,6 @@
     }, ms + 500);
   }
 
-  /* 通知权限 */
-  function checkPerm() {
-    if (!('Notification' in window)) return;
-    $('#permNotice').hidden = Notification.permission === 'granted';
-  }
-  $('#btnPerm').addEventListener('click', () => {
-    if (!('Notification' in window)) { toast('此浏览器不支持通知'); return; }
-    Notification.requestPermission().then((p) => {
-      checkPerm();
-      toast(p === 'granted' ? '通知已开启' : '未开启通知，可用日历导入方式');
-      if (!audioCtx) beep();
-    });
-  });
-
   /* ================= 启动 ================= */
   function init() {
     const n = new Date();
@@ -1383,13 +1081,12 @@
     loadWeatherCache();
     renderAll();
     switchView('home');
-    checkPerm();
     fetchWeather();   // 后台刷新天气
 
     setInterval(() => { renderHero(); }, 30000);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { notifyOnExit(); }
-      else { exitNotified = false; renderAll(); checkPerm(); }
+      else { exitNotified = false; renderAll(); }
     });
     window.addEventListener('pagehide', () => { notifyOnExit(); });
     // 解锁音频（iOS 需用户手势）

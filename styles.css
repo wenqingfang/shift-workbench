@@ -160,7 +160,7 @@ input,textarea,select{font-family:inherit}
 .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex:0 0 auto}
 .sheet-head h3{font-size:17px;font-weight:650}
 .ghost-btn{font-size:14px;color:#9ae7ff;padding:4px 8px;font-weight:600}
-.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:20px;padding-bottom:6px}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;display:flex;flex-direction:column;gap:20px;padding-bottom:6px;flex:1;min-height:0}
 
 /* 班次选择 */
 .shift-picker{display:grid;grid-template-columns:1fr 1fr;gap:9px;overflow-y:auto}

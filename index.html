@@ -53,14 +53,6 @@
       </div>
     </header>
 
-    <div class="notice glass" id="permNotice" hidden>
-      <div class="notice-txt">
-        <strong>开启通知</strong>
-        <p>允许后，退出 App 也会弹出今日提醒（锁屏可见）。</p>
-      </div>
-      <button class="btn-sm grad" id="btnPerm">开启</button>
-    </div>
-
     <section class="card glass" id="todayCard">
       <div class="card-head">
         <h2>今日贴心提醒</h2>
@@ -123,14 +115,6 @@
         <span class="a-icon grad-ico">↧</span>
         <span class="a-txt"><strong>导入排班</strong><small>文本 / 循环规则</small></span>
       </button>
-      <button class="action glass" id="btnExport">
-        <span class="a-icon grad-ico">📝</span>
-        <span class="a-txt"><strong>导出到手机提醒</strong><small>日历 / 提醒事项均可</small></span>
-      </button>
-      <button class="action glass" id="btnTest">
-        <span class="a-icon grad-ico">🔔</span>
-        <span class="a-txt"><strong>测试闹钟</strong><small>试听提醒效果</small></span>
-      </button>
       <button class="action glass" id="btnClock">
         <span class="a-icon grad-ico">⏰</span>
         <span class="a-txt"><strong>iPhone 提醒事项 / 闹钟</strong><small>一键快捷指令批量加提醒事项</small></span>
@@ -153,27 +137,6 @@
             <span class="lead-val" id="leadVal">60 分钟</span>
           </div>
           <p class="hint">例：下午 14:00 上班 → 闹钟 <b id="leadExample">13:00</b></p>
-        </div>
-
-        <div class="field">
-          <label>到点前多次提醒</label>
-          <div class="lead-row">
-            <span class="hint-inline">日历在点班前响多次（如 60/30/15/5 分钟），更不易睡过头</span>
-            <label class="switch"><input type="checkbox" id="multiAlarm"><span class="slider"></span></label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>网页闹钟铃声（前台时）</label>
-          <div class="lead-row">
-            <select id="ringTone" class="sel">
-              <option value="default">双音（默认）</option>
-              <option value="urgent">急促蜂鸣</option>
-              <option value="triple">三连升调</option>
-              <option value="lull">低沉长鸣</option>
-            </select>
-          </div>
-          <p class="hint">仅在本工作台页面前台打开时生效；睡眠锁屏请用 iPhone 自带「时钟」App 闹钟，才能持续响铃。</p>
         </div>
 
         <div class="field">
@@ -204,7 +167,6 @@
         <div class="field">
           <label>使用说明</label>
           <div class="help">
-            <p><b>1 · 真正会响的闹钟靠这一步</b><br>排好班后点「导出到手机提醒」，选「📝 提醒事项」导入（默认）。每个班次自动带「提前 <span id="helpLead">60</span> 分钟」的提醒；升级 iOS 26.2 后，把导入的提醒事项标记为「紧急」，会像闹钟一样响（静音/专注也响），最适合防睡过头。<br>也可切到「📅 日历」导入。改了排班重新导一次即可。</p>
             <p><b>2 · 把本页当 App 用</b><br>Android Chrome：菜单 → 添加到主屏幕。<br>iPhone Safari：分享 → 添加到主屏幕。<br>之后桌面会多一个图标，点开即用，不需要联网。</p>
             <p><b>3 · 连点模式</b><br>日历上方选一个班次后开启连点，点日期直接刷班，批量排班很快。</p>
             <p><b>4 · 换手机 / 清缓存前</b><br>先点「导出备份」存一份 JSON，新设备用「导入备份」还原，排班不会丢。</p>
@@ -295,57 +257,6 @@
   </div>
 </div>
 
-<!-- ===== 抽屉：ICS 导出菜单 ===== -->
-<div class="sheet glass tall" id="sheetIcs">
-  <div class="sheet-handle"></div>
-  <div class="sheet-head">
-    <h3>导出提醒 <span class="pill" id="icsCount">0 天</span></h3>
-    <button class="ghost-btn" id="icsClose">关闭</button>
-  </div>
-  <div class="sheet-body">
-    <p class="hint" id="icsKindHint" style="margin-bottom:12px"></p>
-    <p class="hint" id="icsMultiHint" style="margin-bottom:12px;color:#ffd36a"></p>
-    <details class="hint-box" id="urgentGuide" style="margin-bottom:12px">
-      <summary style="cursor:pointer;font-weight:600">📍 导入后怎么开启「紧急」提醒？</summary>
-      <ol style="margin:8px 0 0 18px;line-height:1.7;font-size:13px">
-        <li>导入成功后，打开 iPhone「提醒事项」App。</li>
-        <li>找到刚导入的提醒（可按日期搜索），点进去。</li>
-        <li>点右上角的 <strong>信息(i)</strong>。</li>
-        <li>在「日期与时间」下方，打开 <strong>紧急</strong> 开关。</li>
-        <li>打开后看一眼「日期与时间」——它应<strong>自动等于你导出的排班时间</strong>（如 08:00 班、提前 60 分就显示 07:00），<strong>不用手动改</strong>。若显示成"今天 15:00"之类，说明 iPhone 没解析进时间，请改用「iPhone 提醒事项 / 系统闹钟」里的快捷指令方案。</li>
-        <li>返回；该条会出现在首页的「紧急」智能列表里，到点会像闹钟一样响。</li>
-      </ol>
-      <p style="margin:8px 0 0 18px;font-size:12px;opacity:.8">注：「紧急」是智能列表，不是普通列表，.ics 文件没有对应字段，所以导入时没法自动打开，必须手动开。已设置高优先级(PRIORITY:1)方便你找到它。</p>
-    </details>
-    <div class="export-menu" id="exportMenu">
-      <button class="btn-full grad" id="btnShareIcs">
-        <span class="btn-icon">📤</span>用系统分享发送 .ics
-        <small>尝试导入「提醒事项」（iOS 可能只识别一条）</small>
-      </button>
-      <button class="btn-full" id="btnOpenIcs">
-        <span class="btn-icon">📝</span>在「提醒事项」中打开
-        <small>Safari 会询问是否导入提醒</small>
-      </button>
-      <button class="btn-full" id="btnSaveIcs">
-        <span class="btn-icon">💾</span>保存到「文件」App
-        <small>从邮件/文件 App 打开可能解析更好</small>
-      </button>
-      <button class="btn-full grad" id="btnShareEach">
-        <span class="btn-icon">📅</span>每天单独导出
-        <small>每天一个 .ics，邮件发给自己后逐个导入</small>
-      </button>
-      <button class="btn-full" id="btnCopyIcs">
-        <span class="btn-icon">📋</span>复制全部内容
-        <small>粘贴到备忘录，再另存为 .ics</small>
-      </button>
-    </div>
-    <div class="copy-area" id="copyArea" hidden>
-      <p class="hint">已复制到剪贴板。在备忘录中新建文件并粘贴，保存为 <b>排班.ics</b>，再用「提醒事项」App 打开即可。</p>
-      <textarea id="icsText" rows="8" readonly></textarea>
-      <button class="btn-full" id="btnBackToMenu">返回导出菜单</button>
-    </div>
-  </div>
-</div>
 
 <!-- ===== 抽屉：iPhone 提醒事项 / 系统闹钟 ===== -->
 <div class="sheet glass tall" id="sheetClock">
@@ -355,67 +266,14 @@
     <button class="ghost-btn" id="clockClose">关闭</button>
   </div>
   <div class="sheet-body">
-    <p class="hint" style="margin-bottom:10px"><strong>先说清楚：</strong>iPhone 不能直接安装网页生成的未签名快捷指令，所以 .shortcut 文件下载导入这条路走不通（你截图的"无法打开未签名快捷指令"就是苹果的封锁）。<br><br>真正能一次创建 60 条提醒的办法是：你在「快捷指令」App 里<strong>手动搭一个批量捷径</strong>（只需搭一次），之后网页点「⚡ 一键运行…」就会自动把全部排班清单写进剪贴板并唤起该捷径，你点一下运行就全部加进「提醒事项」，日期和时间都是你文件里的。</p>
-
     <button class="btn-full grad" id="btnRunRemindersShortcut" style="margin-bottom:12px">
       <span class="btn-icon">⚡</span>一键运行「批量添加排班提醒」
-      <small>自动复制清单并唤起快捷指令 · 需先按下方搭一次</small>
+      <small>自动复制清单并唤起快捷指令</small>
     </button>
     <div class="btn-row" style="margin-bottom:12px">
       <button class="btn-full" id="btnCopyReminders" style="flex:1">📋 复制快捷指令清单</button>
       <button class="btn-full" id="btnDownloadReminders" style="flex:1">💾 下载 .txt 清单</button>
     </div>
-
-    <details class="hint-box" open style="margin-bottom:12px">
-      <summary style="cursor:pointer;font-weight:600">⚡ 首次设置：在 iPhone 搭一个「批量添加排班提醒」捷径（只需一次）</summary>
-      <p style="margin:8px 0 4px 2px;font-size:12.5px;opacity:.85">iOS 26 把动作菜单位置改了，<strong>不用在菜单里翻，直接在每个动作的搜索框里打下面括号里的关键词</strong>就能找到。清单格式：<code>2026/08/05 07:00 | 早班 08:00 上班 · 准备 | 提前 60 分钟提醒</code>（用 <code>|</code> 竖线分隔，在键盘里直接打）。</p>
-      <ol style="margin:8px 0 0 18px;line-height:1.7;font-size:13px">
-        <li>打开 iPhone「快捷指令」App → 点右上角 <strong>+</strong> 新建快捷指令。</li>
-        <li>搜索框搜 <strong>「剪贴板」</strong> → 添加动作 <strong>获取剪贴板</strong>。</li>
-        <li>搜索框搜 <strong>「提醒事项」</strong> → 添加 <strong>查找提醒事项</strong>：过滤器设「标题」「包含」「【班次闹钟】」（这串前缀每条都带，用来精准识别本工具生成的提醒）；<strong>不要给这个动作接任何输入</strong>，让它直接查系统提醒事项。</li>
-        <li>搜索框搜 <strong>「删除」</strong> → 添加 <strong>删除提醒事项</strong>：输入选上一步的<strong>查找结果</strong>。<div style="margin:6px 0 6px 0;padding:8px 10px;border-left:3px solid #ff8a8a;background:rgba(255,138,138,.08);border-radius:6px;font-size:12px">⚠️ 这步会把所有标题带「【班次闹钟】」的旧提醒清掉（包括你之前手动开过「紧急」的）。因为每次运行捷径都是「先清空旧的、再添加最新」，所以<strong>重复运行不会越加越多</strong>。运行后记得重新给需要的条目开「紧急」。</div></li>
-        <li>搜索框搜 <strong>「拆分」</strong> → 添加 <strong>拆分文本</strong>：文本选上一步的<strong>剪贴板</strong>；分隔符选 <strong>新行</strong>。</li>
-        <li>搜索框搜 <strong>「重复」</strong> → 添加 <strong>针对每一项重复</strong>：输入选上一步的<strong>拆分结果</strong>。</li>
-        <li>在循环里，搜索框搜 <strong>「拆分」</strong> → 加 <strong>拆分文本</strong>：文本选魔法变量 <strong>重复项目</strong>；分隔符选 <strong>自定义，输入一个竖线 |</strong>（就是网页清单里用的那个分隔符）。</li>
-        <li>搜索框搜 <strong>「项目」</strong> → 加 <strong>从列表中获取项目</strong>：
-          <div style="margin:6px 0 6px 0;padding:8px 10px;border-left:3px solid #ff8a8a;background:rgba(255,138,138,.08);border-radius:6px;font-size:12px">
-            ⚠️ <strong>最容易错：</strong>这个动作自带的输入框（常写着"日期"或"列表"）<strong>必须改成上一步「按 | 拆分」的结果</strong>。如果显示成 <code>从 日期… 获取</code> 就是接错了，会报"索引超出范围"。正确应为 <code>从 拆分文本… 获取</code>。
-          </div>
-          输入改对后，「索引」填 <strong>1</strong> → 点结果，选「设为变量」→ 命名 <code>日期时间</code>。</li>
-        <li>同样再加两次 <strong>从列表中获取项目</strong>（输入都选「按 | 拆分的结果」）：索引 <strong>2</strong> → 设为变量 <code>标题</code>；索引 <strong>3</strong> → 设为变量 <code>备注</code>。</li>
-        <li>搜索框搜 <strong>「提醒事项」</strong> → 加 <strong>添加提醒事项</strong>：
-          <ul style="margin:6px 0 6px 18px;line-height:1.8;font-size:12.5px">
-            <li><strong>标题</strong>：选变量 <code>标题</code></li>
-            <li><strong>备注</strong>：选变量 <code>备注</code></li>
-            <li>打开 <strong>提醒</strong> 开关</li>
-            <li><strong>时间</strong>：点日期框 → 选魔法变量 <code>日期时间</code>（不是"提醒日期"，就是那个文本变量）</li>
-          </ul>
-        </li>
-        <li>点右上角「完成」，命名为 <strong>批量添加排班提醒</strong>。</li>
-      </ol>
-      <p style="margin:8px 0 0 18px;font-size:12px;opacity:.8"><strong>不用设"提醒日期"变量：</strong>直接把文本变量 <code>日期时间</code> 填进「添加提醒事项」的到期日，iOS 会自动把它解析成日期。如果它死活不认，见下方的「极简版」。</p>
-    </details>
-
-    <details class="hint-box" style="margin-bottom:12px">
-      <summary style="cursor:pointer;font-weight:600">🛟 极简版（如果上面搞不定，用这个）</summary>
-      <p style="margin:8px 0 4px 2px;font-size:12.5px;opacity:.85">上面步骤太多容易接错。极简版每行只有一个时间，<strong>完全不用「从列表中获取项目」和索引</strong>，但所有提醒标题统一为"上班提醒"。</p>
-      <ol style="margin:8px 0 0 18px;line-height:1.7;font-size:13px">
-        <li>在 iPhone「快捷指令」App 新建快捷指令，命名为 <strong>批量添加排班提醒</strong>。</li>
-        <li>搜索框搜 <strong>「剪贴板」</strong> → 加 <strong>获取剪贴板</strong>。</li>
-        <li>搜索框搜 <strong>「拆分」</strong> → 加 <strong>拆分文本</strong>：文本选剪贴板；分隔符选 <strong>新行</strong>。</li>
-        <li>搜索框搜 <strong>「重复」</strong> → 加 <strong>针对每一项重复</strong>：输入选拆分结果。</li>
-        <li>在循环里，搜索框搜 <strong>「提醒事项」</strong> → 加 <strong>添加提醒事项</strong>：标题写死 <code>上班提醒</code>，打开 <strong>提醒</strong> 开关，到期日选魔法变量 <strong>重复项目</strong>。</li>
-        <li>完成。</li>
-      </ol>
-      <p style="margin:8px 0 0 18px;font-size:12px;opacity:.8">使用极简版时，先点网页「📋 复制快捷指令清单」，但它默认复制的是带标题的 3 列。你需要先把清单改成每行只有时间（如 <code>2026/08/05 07:00</code>），或告诉我，我把网页加一个「仅复制时间（极简版）」按钮。</p>
-    </details>
-
-    <div class="btn-row" style="margin-bottom:12px">
-      <button class="btn-full grad" id="btnCopyClock" style="flex:1">📋 复制手动加闹钟清单</button>
-      <button class="btn-full" id="btnOpenClock" style="flex:1">⏰ 打开时钟 App</button>
-    </div>
-    <div class="clock-list" id="clockList"></div>
-    <p class="hint" style="margin-top:12px"><strong>关于「紧急」开关：</strong>快捷指令目前还不能自动勾「紧急」，但日期和时间已经自动填对。运行完批量捷径后，你只需在「提醒事项」App 里把每条点开 → 信息(i) → 打开<strong>紧急</strong>即可，不用改时间。下面「时钟 App」是兜底：最稳、可自定义铃声、锁屏也持续响。</p>
   </div>
 </div>
 
