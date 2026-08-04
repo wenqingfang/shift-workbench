@@ -109,8 +109,7 @@
 
     const hr = now.getHours();
     const greet = hr < 6 ? '夜深了' : hr < 11 ? '早上好' : hr < 14 ? '中午好' : hr < 19 ? '下午好' : '晚上好';
-    const emo = hr < 6 ? '🌙' : hr < 11 ? '☀️' : hr < 14 ? '🍱' : hr < 19 ? '☕' : '🌆';
-    $('#heroGreet').textContent = emo + ' ' + greet;
+    $('#heroGreet').textContent = greet;
 
     const sh = shiftOf(today);
     if (!sh) {

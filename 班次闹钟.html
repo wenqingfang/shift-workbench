@@ -123,10 +123,10 @@ input,textarea,select{font-family:inherit}
 .hero-date{color:var(--txt-dim);font-size:13px;letter-spacing:.5px}
 .hero-shift{font-size:29px;font-weight:700;letter-spacing:-.5px;margin-top:3px;
   background:linear-gradient(120deg,#fff,#cbb8ff 60%,#9ae7ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-.icon-btn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;
-  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);color:var(--txt-dim);transition:.2s}
-.icon-btn:active{transform:scale(.92);background:rgba(255,255,255,.16)}
-.icon-btn svg{width:19px;height:19px}
+.icon-btn{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;
+  background:transparent;border:0;color:var(--txt-dim);transition:.2s;opacity:.75}
+.icon-btn:active{transform:scale(.92);opacity:1;color:var(--txt-main)}
+.icon-btn svg{width:20px;height:20px}
 .hero-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;position:relative}
 .mini-card{border-radius:var(--r-md);padding:11px 13px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
 .mini-card.accent{background:var(--grad-soft);border-color:transparent;box-shadow:0 6px 20px rgba(124,92,255,.35)}
@@ -719,6 +719,12 @@ window.__SINGLE_FILE__ = true;
         </div>
 
         <div class="field">
+          <label>🔄 换手机？一键导入捷径（仅 iPhone 可用）</label>
+          <p class="hint">换新 iPhone 不用重新搭建「批量添加排班提醒」捷径。用 Safari 打开下面链接，点「添加快捷指令」即可（名字固定为「批量添加排班提醒」，与一键运行匹配）。若链接失效，请联系开发人员。</p>
+          <a class="btn-full grad" href="https://www.icloud.com/shortcuts/503e2600c4d84d909ade4ac1d408add6" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;display:block;margin-top:4px">📦 获取「批量添加排班提醒」捷径</a>
+        </div>
+
+        <div class="field">
           <label>使用说明</label>
           <div class="help">
             <p><b>1 · 把本页当 App 用</b><br>iPhone Safari：分享 → 添加到主屏幕。<br>之后桌面会多一个图标，点开即用，不需要联网。</p>
@@ -974,8 +980,7 @@ window.__SINGLE_FILE__ = true;
 
     const hr = now.getHours();
     const greet = hr < 6 ? '夜深了' : hr < 11 ? '早上好' : hr < 14 ? '中午好' : hr < 19 ? '下午好' : '晚上好';
-    const emo = hr < 6 ? '🌙' : hr < 11 ? '☀️' : hr < 14 ? '🍱' : hr < 19 ? '☕' : '🌆';
-    $('#heroGreet').textContent = emo + ' ' + greet;
+    $('#heroGreet').textContent = greet;
 
     const sh = shiftOf(today);
     if (!sh) {
