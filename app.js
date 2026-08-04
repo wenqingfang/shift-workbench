@@ -708,7 +708,11 @@
     });
   }
   $('#cycUndo').addEventListener('click', () => { cycleSeq.pop(); renderCycSeq(); });
-  $('#cycClear').addEventListener('click', () => { cycleSeq = []; renderCycSeq(); });
+  $('#cycClear').addEventListener('click', () => {
+    cycleSeq = []; renderCycSeq();
+    importBuffer = []; importPreviewMode = null;
+    $('#importPreview').hidden = true; $('#prevList').innerHTML = ''; $('#prevCount').textContent = '0 天';
+  });
   $('#btnCycGen').addEventListener('click', () => {
     if (!cycleSeq.length) { toast('先添加循环顺序'); return; }
     const sv = $('#cycStart').value;
