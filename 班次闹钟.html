@@ -255,21 +255,24 @@ input,textarea,select{font-family:inherit}
 .hint-box summary::-webkit-details-marker{display:none}
 .hint-box[open] summary{margin-bottom:6px}
 .hint-box ol,.hint-box p{color:var(--txt-faint)}
-.lead-row{display:flex;align-items:center;gap:12px}
-input[type=range]{flex:1;-webkit-appearance:none;height:5px;border-radius:5px;background:rgba(255,255,255,.14);outline:none}
+.lead-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+input[type=range]{flex:1;min-width:120px;-webkit-appearance:none;height:5px;border-radius:5px;background:rgba(255,255,255,.14);outline:none}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--grad);box-shadow:0 3px 10px rgba(124,92,255,.5)}
 .lead-val{font-size:14px;font-weight:600;min-width:72px;text-align:right;font-variant-numeric:tabular-nums}
 .shift-editor{display:flex;flex-direction:column;gap:8px}
 .se{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
-.se input[type=text]{flex:1;min-width:0;background:transparent;border:none;color:var(--txt);font-size:14px;font-weight:600;padding:2px 0;outline:none}
-.se input[type=time]{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--txt);font-size:13px;padding:4px 6px;outline:none}
+.se input[type=text]{flex:1 1 90px;min-width:60px;background:transparent;border:none;color:var(--txt);font-size:14px;font-weight:600;padding:2px 0;outline:none}
+.se-times{display:flex;gap:8px;flex:1 1 100%;min-width:0}
+.se-times input[type=time]{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--txt);font-size:13px;padding:4px 6px;outline:none;min-width:72px}
 .se input[type=color]{width:26px;height:26px;padding:0;border:none;border-radius:8px;background:transparent;flex:0 0 auto}
-.se .del{color:#ff7b93;font-size:17px;padding:0 3px;flex:0 0 auto}
-.se.off input[type=time]{opacity:.3;pointer-events:none}
+.se .clone,.se .del{flex:0 0 auto;padding:0 4px;font-size:17px}
+.se .del{color:#ff7b93}
+.se .clone{color:#9ae7ff}
+.se.off .se-times input[type=time]{opacity:.3;pointer-events:none}
 .btn-line{padding:11px;border-radius:var(--r-sm);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);font-size:13.5px;font-weight:600;flex:1;transition:.15s}
 .btn-line:active{transform:scale(.97);background:rgba(255,255,255,.14)}
 .btn-line.danger{color:#ff7b93;border-color:rgba(255,123,147,.25)}
-.btn-row{display:flex;gap:8px}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px}
 .btn-full{width:100%;padding:14px;border-radius:var(--r-md);font-size:15px;font-weight:650}
 .btn-full:active{transform:scale(.98)}
 .btn-full small{display:block;margin-top:3px;font-size:11px;font-weight:500;color:var(--txt-dim);opacity:.85}
@@ -319,8 +322,9 @@ textarea,input[type=month],input[type=date],input[type=number]{
   width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:var(--r-sm);
   color:var(--txt);padding:11px;font-size:14px;outline:none;resize:vertical}
 textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
-.field-inline{display:flex;align-items:center;gap:10px}
+.field-inline{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
 .field-inline label{font-size:13px;color:var(--txt-dim);flex:0 0 76px}
+.field-inline .sel{flex:1;min-width:0}
 .mini-label2{font-size:12px;color:var(--txt-faint)}
 .cyc-chips{display:flex;flex-wrap:wrap;gap:6px}
 .cyc-seq{display:flex;flex-wrap:wrap;gap:5px;min-height:40px;padding:9px;border-radius:var(--r-sm);
@@ -431,11 +435,8 @@ textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
   background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);color:var(--txt-dim)}
 .action-sm:active{transform:scale(.98);background:rgba(255,255,255,.14)}
 
-/* ===== 班次克隆 ===== */
-.se .clone{color:#9ae7ff;font-size:15px;padding:0 4px;flex:0 0 auto}
-
 /* ===== 多套班表 ===== */
-.profile-bar{display:flex;align-items:center;gap:8px;padding:2px}
+.profile-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:2px}
 .profile-label{font-size:12px;color:var(--txt-faint);flex:0 0 auto;letter-spacing:.5px}
 .profile-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
 .profile-chips::-webkit-scrollbar{display:none}
@@ -1552,11 +1553,14 @@ window.__SINGLE_FILE__ = true;
       row.innerHTML =
         '<input type="color" value="' + s.color + '">' +
         '<input type="text" value="' + esc(s.name) + '" maxlength="8" placeholder="班次名">' +
-        '<input type="time" value="' + (s.start || '') + '" title="上班时间" aria-label="上班时间">' +
-        '<input type="time" value="' + (s.end || '') + '" title="下班时间" aria-label="下班时间">' +
+        '<div class="se-times">' +
+          '<input type="time" value="' + (s.start || '') + '" title="上班时间" aria-label="上班时间">' +
+          '<input type="time" value="' + (s.end || '') + '" title="下班时间" aria-label="下班时间">' +
+        '</div>' +
         '<button class="clone" title="克隆">⧉</button>' +
         '<button class="del" title="删除">✕</button>';
-      const [color, name, time, etime, clone, del] = [row.children[0], row.children[1], row.children[2], row.children[3], row.children[4], row.children[5]];
+      const [color, name, timesWrap, clone, del] = [row.children[0], row.children[1], row.children[2], row.children[3], row.children[4]];
+      const time = timesWrap.children[0], etime = timesWrap.children[1];
       color.addEventListener('input', () => { s.color = color.value; save(); renderCalendar(); renderLegend(); });
       name.addEventListener('input', () => { s.name = name.value || '班次'; save(); });
       name.addEventListener('blur', () => { renderAll(); });

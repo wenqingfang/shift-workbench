@@ -683,11 +683,14 @@
       row.innerHTML =
         '<input type="color" value="' + s.color + '">' +
         '<input type="text" value="' + esc(s.name) + '" maxlength="8" placeholder="班次名">' +
-        '<input type="time" value="' + (s.start || '') + '" title="上班时间" aria-label="上班时间">' +
-        '<input type="time" value="' + (s.end || '') + '" title="下班时间" aria-label="下班时间">' +
+        '<div class="se-times">' +
+          '<input type="time" value="' + (s.start || '') + '" title="上班时间" aria-label="上班时间">' +
+          '<input type="time" value="' + (s.end || '') + '" title="下班时间" aria-label="下班时间">' +
+        '</div>' +
         '<button class="clone" title="克隆">⧉</button>' +
         '<button class="del" title="删除">✕</button>';
-      const [color, name, time, etime, clone, del] = [row.children[0], row.children[1], row.children[2], row.children[3], row.children[4], row.children[5]];
+      const [color, name, timesWrap, clone, del] = [row.children[0], row.children[1], row.children[2], row.children[3], row.children[4]];
+      const time = timesWrap.children[0], etime = timesWrap.children[1];
       color.addEventListener('input', () => { s.color = color.value; save(); renderCalendar(); renderLegend(); });
       name.addEventListener('input', () => { s.name = name.value || '班次'; save(); });
       name.addEventListener('blur', () => { renderAll(); });
