@@ -863,15 +863,206 @@
   /* ================= 底部导航：视图切换 ================= */
   let curView = 'home';
   function switchView(name) {
+    if (curView === 'play' && name !== 'play') leavePlay();
     curView = name;
     $$('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
     $$('.nav-tab').forEach((t) => t.classList.toggle('on', t.dataset.view === name));
     if (name === 'settings') renderSettings();
     if (name === 'schedule') { renderCalendar(); renderAlarmList(); renderPaint(); renderProfileBar(); }
     if (name === 'home') { renderHero(); renderCountdown(); }
+    if (name === 'play') enterPlay();
     window.scrollTo(0, 0);
   }
   $$('.nav-tab').forEach((t) => t.addEventListener('click', () => switchView(t.dataset.view)));
+
+  /* ================= 玩 · 睡意测试 + 贪吃蛇 ================= */
+  let reactState = 'idle', reactWaitT = null, reactStart = 0;
+  let reactBest = parseInt(localStorage.getItem('sw_reactBest') || '0', 10) || 0;
+  let snake = null;
+
+  function setReact(state) {
+    reactState = state;
+    const pad = $('#reactPad'), txt = $('#reactText');
+    if (!pad) return;
+    pad.className = 'react-pad ' + state;
+    if (state === 'idle') txt.textContent = '点击开始';
+    else if (state === 'waiting') txt.textContent = '等待绿色…';
+    else if (state === 'go') txt.textContent = '点！';
+  }
+  function reactTap() {
+    if (reactState === 'idle') {
+      setReact('waiting');
+      reactWaitT = setTimeout(() => { setReact('go'); reactStart = Date.now(); }, 1000 + Math.random() * 3000);
+    } else if (reactState === 'waiting') {
+      clearTimeout(reactWaitT); reactWaitT = null;
+      const v = $('#reactVerdict'); if (v) v.textContent = '⚠️ 太快了！等变绿再点';
+      setReact('idle');
+    } else if (reactState === 'go') {
+      const dt = Date.now() - reactStart; reactWaitT = null;
+      const last = $('#reactLast'); if (last) last.textContent = dt + ' ms';
+      if (!reactBest || dt < reactBest) {
+        reactBest = dt; localStorage.setItem('sw_reactBest', String(dt));
+        const b = $('#reactBest'); if (b) b.textContent = dt + ' ms';
+      }
+      const v = $('#reactVerdict'); if (v) v.textContent = reactVerdict(dt);
+      setReact('idle');
+    }
+  }
+  function reactVerdict(ms) {
+    if (ms < 200) return '⚡ 反应超快，精神很在线！';
+    if (ms < 350) return '😊 状态不错，挺清醒的';
+    if (ms < 500) return '😐 有点走神了，干活注意安全';
+    return '😴 反应偏慢，找个空档补个觉吧';
+  }
+  function stopReactWait() { if (reactWaitT) { clearTimeout(reactWaitT); reactWaitT = null; } }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function sizeSnake() {
+    const c = snake.c, wrap = c.parentElement;
+    const cssW = Math.min((wrap ? wrap.clientWidth : 320) || 320, 360);
+    const dpr = window.devicePixelRatio || 1;
+    c.style.width = cssW + 'px'; c.style.height = cssW + 'px';
+    c.width = Math.round(cssW * dpr); c.height = Math.round(cssW * dpr);
+    snake.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    snake.size = cssW / snake.GRID;
+  }
+  function drawSnake() {
+    const G = snake, ctx = G.ctx, size = G.size, body = G.snake, food = G.food;
+    const W = G.c.clientWidth;
+    ctx.clearRect(0, 0, W, W);
+    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.fillRect(0, 0, W, W);
+    if (food) {
+      ctx.fillStyle = '#ff6b81';
+      roundRect(ctx, food.x * size + size * 0.15, food.y * size + size * 0.15, size * 0.7, size * 0.7, size * 0.22);
+      ctx.fill();
+    }
+    body.forEach((s, i) => {
+      ctx.fillStyle = i === 0 ? '#9ae7ff' : 'rgba(154,231,255,' + (0.9 - 0.55 * (i / body.length)).toFixed(3) + ')';
+      roundRect(ctx, s.x * size + size * 0.08, s.y * size + size * 0.08, size * 0.84, size * 0.84, size * 0.22);
+      ctx.fill();
+    });
+  }
+  function placeFood() {
+    const G = snake.GRID; let p;
+    do { p = { x: Math.floor(Math.random() * G), y: Math.floor(Math.random() * G) }; }
+    while (snake.snake.some((s) => s.x === p.x && s.y === p.y));
+    snake.food = p;
+  }
+  function stepSnake() {
+    snake.dir = snake.next;
+    const head = { x: snake.snake[0].x + snake.dir.x, y: snake.snake[0].y + snake.dir.y };
+    const G = snake.GRID;
+    if (head.x < 0 || head.y < 0 || head.x >= G || head.y >= G ||
+        snake.snake.some((s) => s.x === head.x && s.y === head.y)) { gameOverSnake(); return; }
+    snake.snake.unshift(head);
+    if (snake.food && head.x === snake.food.x && head.y === snake.food.y) {
+      snake.score += 10;
+      const sc = $('#snakeScore'); if (sc) sc.textContent = snake.score;
+      placeFood();
+      if (snake.score % 50 === 0 && snake.speed > 70) {
+        snake.speed -= 15;
+        clearInterval(snake.timer); snake.timer = setInterval(stepSnake, snake.speed);
+      }
+    } else {
+      snake.snake.pop();
+    }
+    drawSnake();
+  }
+  function gameOverSnake() {
+    snake.running = false; clearInterval(snake.timer); snake.timer = null;
+    if (snake.score > snake.high) {
+      snake.high = snake.score; localStorage.setItem('sw_snakeHigh', String(snake.score));
+      const h = $('#snakeHigh'); if (h) h.textContent = snake.high;
+    }
+    const m = $('#snakeMsg'); if (m) m.textContent = '游戏结束！得分 ' + snake.score + '，点「开始」再来一局';
+    const p = $('#snakePause'); if (p) { p.disabled = true; }
+  }
+  function startSnake() {
+    if (!snake) initSnake();
+    if (snake.running) return;
+    if (!snake.snake.length) {
+      snake.snake = [{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }];
+      snake.dir = { x: 1, y: 0 }; snake.next = { x: 1, y: 0 }; snake.score = 0; placeFood();
+    }
+    snake.running = true;
+    const st = $('#snakeStart'); if (st) st.textContent = '重新开始';
+    const p = $('#snakePause'); if (p) { p.disabled = false; p.textContent = '暂停'; }
+    const m = $('#snakeMsg'); if (m) m.textContent = '';
+    snake.timer = setInterval(stepSnake, snake.speed);
+  }
+  function pauseSnake() {
+    if (!snake) return;
+    const p = $('#snakePause');
+    if (snake.running) {
+      clearInterval(snake.timer); snake.timer = null; snake.running = false;
+      if (p) p.textContent = '继续';
+      const m = $('#snakeMsg'); if (m) m.textContent = '已暂停';
+    } else if (snake.snake.length) {
+      snake.running = true; if (p) p.textContent = '暂停';
+      const m = $('#snakeMsg'); if (m) m.textContent = '';
+      snake.timer = setInterval(stepSnake, snake.speed);
+    }
+  }
+  function setDir(d) {
+    const map = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+    const v = map[d]; if (!v || !snake) return;
+    if (snake.snake.length > 1) {
+      const cur = snake.next;
+      if (v.x === -cur.x && v.y === -cur.y) return; // 不能反向
+    }
+    snake.next = v;
+  }
+  function initSnake() {
+    const c = $('#snakeCanvas'); if (!c) return;
+    const ctx = c.getContext('2d');
+    snake = { c, ctx, GRID: 17, size: 0, snake: [], dir: { x: 1, y: 0 }, next: { x: 1, y: 0 }, food: null, score: 0, running: false, timer: null, speed: 140, high: parseInt(localStorage.getItem('sw_snakeHigh') || '0', 10) || 0 };
+    const h = $('#snakeHigh'); if (h) h.textContent = snake.high;
+    const sc = $('#snakeScore'); if (sc) sc.textContent = '0';
+    sizeSnake(); drawSnake();
+  }
+  function stopSnake() {
+    if (snake && snake.timer) { clearInterval(snake.timer); snake.timer = null; }
+    if (snake) snake.running = false;
+  }
+  function enterPlay() {
+    const b = $('#reactBest'); if (b) b.textContent = reactBest ? reactBest + ' ms' : '—';
+    const l = $('#reactLast'); if (l) l.textContent = '—';
+    const v = $('#reactVerdict'); if (v) v.textContent = '';
+    setReact('idle');
+    if (!snake) initSnake(); else { sizeSnake(); drawSnake(); }
+  }
+  function leavePlay() { stopReactWait(); stopSnake(); }
+  function bindPlay() {
+    const pad = $('#reactPad'); if (pad) pad.addEventListener('click', reactTap);
+    const sc = $('#snakeCanvas'); if (sc) {
+      let tsx = 0, tsy = 0;
+      sc.addEventListener('touchstart', (e) => { const t = e.touches[0]; tsx = t.clientX; tsy = t.clientY; }, { passive: true });
+      sc.addEventListener('touchend', (e) => {
+        const t = e.changedTouches[0]; const dx = t.clientX - tsx, dy = t.clientY - tsy;
+        if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+        if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 'right' : 'left');
+        else setDir(dy > 0 ? 'down' : 'up');
+      }, { passive: true });
+    }
+    const startBtn = $('#snakeStart'); if (startBtn) startBtn.addEventListener('click', startSnake);
+    const pauseBtn = $('#snakePause'); if (pauseBtn) pauseBtn.addEventListener('click', pauseSnake);
+    $$('#snakeCtrl button').forEach((b) => b.addEventListener('click', () => setDir(b.dataset.dir)));
+    document.addEventListener('keydown', (e) => {
+      if (curView !== 'play') return;
+      const m = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+      if (m[e.key]) { e.preventDefault(); setDir(m[e.key]); }
+    });
+    window.addEventListener('resize', () => { if (curView === 'play' && snake) { sizeSnake(); drawSnake(); } });
+  }
 
   /* ================= 抽屉控制 ================= */
   function openSheet(sel) {
@@ -1805,6 +1996,7 @@
     { t: '六、本月统计与周报', h: '<p>排班页「本月统计」卡自动算出<b>上班天数 / 休息天数 / 总工时</b>及各班次天数分布（翻月刷新）。</p><p>点「🖼️ 导出本周排班图片」可生成本周图，直接发班组群。</p>' },
     { t: '七、外观与背景', h: '<p>「设置 → 外观」可选<b>主题色</b>与<b>背景色</b>。主题色有 极光紫 / 日落橙 / 深海蓝 / 石墨灰 四套预设，也能选「自定义」用取色器挑任意颜色（会自动生成渐变，用于按钮、强调条等）。背景色有 紫 / 蓝 / 橙 / 绿 / 粉 / 黑 及「自定义」，切换时整页光晕会明显变化。</p><p><b>护眼模式</b>：同样在「外观」里，可选 关 / 手动开 / 自动（夜班/夜间）。开启后整屏覆一层<b>红色滤镜</b>，保护暗视力、夜间不刺眼；「自动」会在夜班当天或夜间（22:00–06:00）自动启用，白天自动关。</p>' },
     { t: '八、备份与还原', h: '<p>「设置 → 数据」里<b>导出备份</b>存一份 JSON；换新手机用<b>导入备份</b>还原，排班不丢。</p><p>「彻底清除缓存」会重置全部数据，慎用。</p>' },
+    { t: '九、玩 · 摸鱼解压', h: '<p>底部「🎮 玩」标签页有两个打发时间的小玩意：</p><p>① <b>睡意测试</b>：屏幕变绿瞬间点它，测你的反应速度，并给出「现在有多困」的趣味结论（< 200ms 超清醒，> 500ms 该补觉了）。最佳成绩会记住。</p><p>② <b>贪吃蛇</b>：点「开始」用屏幕滑动或方向键 / 方向按钮操控，吃豆加分、撞墙或咬到自己就结束，最高分本地保存。</p>' },
     { t: '九、把它当 App 用', h: '<p>iPhone Safari：点底部「分享」→「添加到主屏幕」。之后桌面多一个图标，点开即用，离线也能跑。</p>' }
   ];
 
@@ -1869,7 +2061,7 @@
       if (document.hidden) { notifyOnExit(); }
       else { exitNotified = false; renderAll(); }
     });
-    window.addEventListener('pagehide', () => { notifyOnExit(); });
+    window.addEventListener('pagehide', () => { if (curView === 'play') leavePlay(); notifyOnExit(); });
     // 解锁音频（iOS 需用户手势）
     document.addEventListener('touchstart', function unlock() {
       try {
@@ -1893,6 +2085,8 @@
     if (manualOverlay) manualOverlay.addEventListener('click', (e) => { if (e.target === manualOverlay) closeManual(); });
     const btnManual = $('#btnManual');
     if (btnManual) btnManual.addEventListener('click', openManual);
+
+    bindPlay();   // 玩 · 睡意测试 + 贪吃蛇 事件绑定
 
     // 单文件 / file:// 模式下没有 sw.js，也无法注册，直接跳过
     if ('serviceWorker' in navigator &&

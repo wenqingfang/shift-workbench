@@ -280,6 +280,45 @@
   </section>
 </main>
 
+<!-- ===================== 玩 · 摸鱼解压 ===================== -->
+<section class="view" id="view-play">
+  <div class="page-head"><h1>摸鱼 · 解压</h1><p class="play-sub">班次间隙打发时间的小玩意</p></div>
+
+  <!-- 睡意 / 反应力测试 -->
+  <section class="card glass">
+    <div class="card-head"><h2>😴 睡意测试</h2></div>
+    <p class="muted">测测你现在有多困——屏幕变<b>绿</b>的瞬间点它，越快说明越清醒。</p>
+    <div class="react-pad idle" id="reactPad"><span id="reactText">点击开始</span></div>
+    <div class="react-row">
+      <span>上次：<b id="reactLast">—</b></span>
+      <span>最佳：<b id="reactBest">—</b></span>
+    </div>
+    <p class="react-verdict" id="reactVerdict"></p>
+  </section>
+
+  <!-- 贪吃蛇 -->
+  <section class="card glass">
+    <div class="card-head"><h2>🐍 贪吃蛇</h2><span class="chip" id="snakeScore">0</span></div>
+    <p class="muted center">最高分：<b id="snakeHigh">0</b></p>
+    <div class="snake-wrap">
+      <canvas id="snakeCanvas" class="snake-canvas"></canvas>
+    </div>
+    <div class="snake-ctrl">
+      <button data-dir="up">↑</button>
+      <div class="snake-ctrl-mid">
+        <button data-dir="left">←</button>
+        <button data-dir="down">↓</button>
+        <button data-dir="right">→</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-line" id="snakeStart">开始</button>
+      <button class="btn-line" id="snakePause" disabled>暂停</button>
+    </div>
+    <p class="muted center snake-msg" id="snakeMsg">手机可滑动屏幕控制方向</p>
+  </section>
+</section>
+
 <!-- ===================== 底部导航 ===================== -->
 <nav class="tabbar">
   <button class="nav-tab on" data-view="home">
@@ -290,6 +329,9 @@
   </button>
   <button class="nav-tab" data-view="settings">
     <span class="nt-ico">⚙️</span><span>设置</span>
+  </button>
+  <button class="nav-tab" data-view="play">
+    <span class="nt-ico">🎮</span><span>玩</span>
   </button>
 </nav>
 
