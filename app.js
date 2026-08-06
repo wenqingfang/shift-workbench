@@ -927,7 +927,7 @@
   }
   function sizeSnake() {
     const c = snake.c, wrap = c.parentElement;
-    const cssW = Math.min((wrap ? wrap.clientWidth : 320) || 320, 360);
+    const cssW = Math.min((wrap ? wrap.clientWidth : 320) || 320, Math.round((window.innerHeight || 640) * 0.38), 320);
     const dpr = window.devicePixelRatio || 1;
     c.style.width = cssW + 'px'; c.style.height = cssW + 'px';
     c.width = Math.round(cssW * dpr); c.height = Math.round(cssW * dpr);
@@ -968,8 +968,8 @@
       snake.score += 10;
       const sc = $('#snakeScore'); if (sc) sc.textContent = snake.score;
       placeFood();
-      if (snake.score % 50 === 0 && snake.speed > 70) {
-        snake.speed -= 15;
+      if (snake.score % 50 === 0 && snake.speed > 110) {
+        snake.speed -= 10;
         clearInterval(snake.timer); snake.timer = setInterval(stepSnake, snake.speed);
       }
     } else {
@@ -978,7 +978,7 @@
     drawSnake();
   }
   function gameOverSnake() {
-    snake.running = false; clearInterval(snake.timer); snake.timer = null;
+    snake.running = false; snake.gameOver = true; clearInterval(snake.timer); snake.timer = null;
     if (snake.score > snake.high) {
       snake.high = snake.score; localStorage.setItem('sw_snakeHigh', String(snake.score));
       const h = $('#snakeHigh'); if (h) h.textContent = snake.high;
@@ -988,11 +988,12 @@
   }
   function startSnake() {
     if (!snake) initSnake();
-    if (snake.running) return;
-    if (!snake.snake.length) {
-      snake.snake = [{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }];
-      snake.dir = { x: 1, y: 0 }; snake.next = { x: 1, y: 0 }; snake.score = 0; placeFood();
-    }
+    stopSnake();
+    // 每次都重置，保证「开始 / 重新开始」一定生效
+    snake.snake = [{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }];
+    snake.dir = { x: 1, y: 0 }; snake.next = { x: 1, y: 0 };
+    snake.score = 0; snake.speed = 180; snake.food = null; snake.gameOver = false; placeFood();
+    const sc = $('#snakeScore'); if (sc) sc.textContent = '0';
     snake.running = true;
     const st = $('#snakeStart'); if (st) st.textContent = '重新开始';
     const p = $('#snakePause'); if (p) { p.disabled = false; p.textContent = '暂停'; }
@@ -1015,6 +1016,7 @@
   function setDir(d) {
     const map = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
     const v = map[d]; if (!v || !snake) return;
+    if (!snake.running && (snake.snake.length === 0 || snake.gameOver)) startSnake();
     if (snake.snake.length > 1) {
       const cur = snake.next;
       if (v.x === -cur.x && v.y === -cur.y) return; // 不能反向
@@ -1024,7 +1026,7 @@
   function initSnake() {
     const c = $('#snakeCanvas'); if (!c) return;
     const ctx = c.getContext('2d');
-    snake = { c, ctx, GRID: 17, size: 0, snake: [], dir: { x: 1, y: 0 }, next: { x: 1, y: 0 }, food: null, score: 0, running: false, timer: null, speed: 140, high: parseInt(localStorage.getItem('sw_snakeHigh') || '0', 10) || 0 };
+    snake = { c, ctx, GRID: 17, size: 0, snake: [], dir: { x: 1, y: 0 }, next: { x: 1, y: 0 }, food: null, score: 0, running: false, timer: null, speed: 180, high: parseInt(localStorage.getItem('sw_snakeHigh') || '0', 10) || 0, gameOver: false };
     const h = $('#snakeHigh'); if (h) h.textContent = snake.high;
     const sc = $('#snakeScore'); if (sc) sc.textContent = '0';
     sizeSnake(); drawSnake();

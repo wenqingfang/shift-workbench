@@ -166,6 +166,7 @@ input,textarea,select{font-family:inherit}
 .snake-ctrl button{width:48px;height:42px;border-radius:12px;font-size:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-weight:700}
 .snake-ctrl button:active{background:rgba(255,255,255,.18)}
 .snake-msg{margin-top:6px}
+#view-play .card:last-child{margin-bottom:12px}
 
 /* 本周排班小条 */
 .week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
