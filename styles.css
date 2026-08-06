@@ -125,6 +125,24 @@ input,textarea,select{font-family:inherit}
 .countdown{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12.5px;color:var(--txt-dim);position:relative}
 .cd-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 10px #4ade80;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.countdown[hidden]{display:none!important}
+
+/* 实时下班倒计时 + 休息日倒数 */
+.hero-status{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.countdown.live{margin-top:0;color:var(--txt-main);background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.28);border-radius:12px;padding:9px 12px;font-size:13px}
+.countdown.live b{color:#86efac;font-variant-numeric:tabular-nums}
+.live-dot{background:#4ade80;box-shadow:0 0 10px #4ade80}
+.countdown.rest{margin-top:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px 12px;font-size:13px}
+.countdown.rest b{color:var(--txt-main)}
+.rest-dot{background:#fbbf24;box-shadow:0 0 10px #fbbf24;animation:none}
+
+/* 健康关怀 */
+.care-body{display:flex;flex-direction:column;gap:10px}
+.care-item{font-size:13px;line-height:1.55;color:var(--txt-main);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:11px 13px}
+.care-item b{color:#ffd479;font-variant-numeric:tabular-nums}
+
+/* 夜班护眼红屏滤镜（pointer-events:none，不挡操作；盖住内容/底栏/抽屉，但不盖闹钟/引导/提示） */
+.night-overlay{position:fixed;inset:0;z-index:80;pointer-events:none;background:rgba(255,40,40,.22);mix-blend-mode:multiply;display:none}
 
 /* 本周排班小条 */
 .week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}

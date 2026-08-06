@@ -17,7 +17,8 @@
     bgColor: 'aurora',     // aurora / ocean / sunset / mint / rose / black / custom
     bgCustom: '#0a0717',   // 自定义背景色
     fontScale: 1,          // 字号缩放已下线，保留 1 兼容旧备份
-    homeCards: ['hero', 'weather', 'tips'], // 首页卡片顺序（hero 始终置顶，weather/tips 可显隐排序）
+    nightMode: 'off',      // 夜班护眼：off / manual / auto
+    homeCards: ['hero', 'weather', 'tips', 'care'], // 首页卡片顺序（hero 始终置顶，其余可显隐排序）
     templates: [],         // 班表模板 [{ name, seq:[shiftId,...] }]
     shifts: [
       { id: 'am',    name: '上午班', start: '08:00', end: '12:00', color: '#f59e0b', alarm: true },
@@ -44,6 +45,8 @@
   let alarmTimer = null;
   let audioCtx = null;
   let ringTimer = null;
+  let liveEnd = null;       // 当前班次下班时间（用于首页实时倒计时）
+  let liveTimer = null;     // 实时倒计时 1s 定时器
 
   /* ================= 存储 ================= */
   function load() {
@@ -51,7 +54,10 @@
       const raw = localStorage.getItem(KEY);
       if (!raw) return JSON.parse(JSON.stringify(DEFAULT));
       const d = JSON.parse(raw);
-      return Object.assign(JSON.parse(JSON.stringify(DEFAULT)), d);
+      const merged = Object.assign(JSON.parse(JSON.stringify(DEFAULT)), d);
+      // 旧备份可能没有「健康关怀」卡，自动补上，保证新功能对老用户也可见
+      if (merged.homeCards && !merged.homeCards.includes('care')) merged.homeCards.push('care');
+      return merged;
     } catch (e) {
       return JSON.parse(JSON.stringify(DEFAULT));
     }
@@ -85,6 +91,14 @@
     if (!sh || !sh.start || !sh.alarm) return null;
     const st = startAt(dateStr, sh);
     return new Date(st.getTime() - S.leadMinutes * 60000);
+  }
+  /** 下班时间 Date 对象 */
+  function endAt(dateStr, sh) {
+    if (!sh || !sh.end) return null;
+    const d = parseYmd(dateStr);
+    const t = sh.end.split(':');
+    d.setHours(+t[0], +t[1], 0, 0);
+    return d;
   }
   function hhmm(d) { return d ? pad(d.getHours()) + ':' + pad(d.getMinutes()) : '--:--'; }
 
@@ -184,8 +198,66 @@
           '<span class="mini-value" id="heroAlarm">' + (sh && sh.start && sh.alarm ? hhmm(alarmAt(today, sh)) : '无') + '</span>' +
         '</div>';
     }
+    // 实时下班倒计时：仅当今天有完整上下班时间且当前正处于班次内
+    const now0 = new Date();
+    if (sh && sh.start && sh.end) {
+      const st = startAt(today, sh);
+      const en = endAt(today, sh);
+      if (st && en && now0 >= st && now0 <= en) {
+        liveEnd = en;
+        const lc = $('#liveClock'); if (lc) lc.hidden = false;
+      } else {
+        liveEnd = null;
+        const lc = $('#liveClock'); if (lc) lc.hidden = true;
+      }
+    } else {
+      liveEnd = null;
+      const lc = $('#liveClock'); if (lc) lc.hidden = true;
+    }
+
+    // 下一个休息日
+    const rest = nextRestInfo();
+    const restEl = $('#restInfo');
+    if (restEl) {
+      if (!rest) restEl.innerHTML = '<span class="cd-dot rest-dot"></span><span>🗓️ 近 60 天没有休息日，注意身体 ⚠️</span>';
+      else if (rest.days === 0) restEl.innerHTML = '<span class="cd-dot rest-dot"></span><span>🎉 今天就是休息日，好好放松</span>';
+      else restEl.innerHTML = '<span class="cd-dot rest-dot"></span><span>🛌 距离下一个休息日还有 <b>' + rest.days + '</b> 天（' + rest.label + '）</span>';
+    }
+
     renderCountdown();
     renderWeekStrip();
+    renderCare();
+  }
+
+  /** 首页实时下班倒计时（每秒刷新文本） */
+  function updateLiveClock() {
+    const el = $('#liveClockText');
+    if (!el) return;
+    if (!liveEnd) { const lc = $('#liveClock'); if (lc) lc.hidden = true; return; }
+    const ms = liveEnd - new Date();
+    if (ms <= 0) { renderHero(); return; }   // 刚下班，重渲染自动隐藏
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const str = h > 0 ? (h + ' 小时 ' + m + ' 分 ' + s + ' 秒') : (m + ' 分 ' + s + ' 秒');
+    el.innerHTML = '🟢 上班中 · 还有 <b>' + str + '</b> 下班';
+  }
+
+  /** 健康关怀卡片内容 */
+  function renderCare() {
+    const box = $('#careBody');
+    if (!box) return;
+    const items = [];
+    const streak = workStreak();
+    if (streak >= 4) items.push('💪 已连续上班 <b>' + streak + '</b> 天，今晚务必好好休息，别硬撑');
+    const sa = sleepAdvice();
+    if (sa) items.push('😴 ' + sa.when + ' <b>' + sa.start + '</b> 上班，建议 <b>' + sa.bed + '</b> 前入睡（睡满 8 小时更稳）');
+    const tsh = shiftOf(ymd(new Date()));
+    if (isNightShift(tsh)) items.push('🌙 今晚是夜班，记得开「设置 → 夜班护眼模式」保护暗视力');
+    const rs = restStreak();
+    if (rs >= 2) items.push('🏖️ 已连续休息 <b>' + rs + '</b> 天，好好放松充电');
+    if (!items.length) items.push('🌿 作息规律，状态不错，保持住～');
+    box.innerHTML = items.map((t) => '<div class="care-item">' + t + '</div>').join('');
   }
 
   /** 下一次有排班的日期信息（从明天开始找 60 天） */
@@ -203,6 +275,90 @@
         else if (i === 2) label = '后天';
         else label = (d.getMonth() + 1) + '月' + d.getDate() + '日';
         return { key: key, date: d, shift: sh, days: days, label: label };
+      }
+    }
+    return null;
+  }
+
+  /** 下一个休息日信息（今天也算；休息 = 有班次但没上班时间） */
+  function nextRestInfo() {
+    const now = new Date();
+    for (let i = 0; i <= 60; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      const key = ymd(d);
+      const sh = shiftOf(key);
+      if (sh && !sh.start) {
+        let label, days = i;
+        if (i === 0) { label = '今天'; days = 0; }
+        else if (i === 1) label = '明天';
+        else if (i === 2) label = '后天';
+        else label = (d.getMonth() + 1) + '月' + d.getDate() + '日';
+        return { key: key, date: d, shift: sh, days: days, label: label };
+      }
+    }
+    return null;
+  }
+
+  /** 是否夜班（用于护眼模式自动判断）：晚 20 点后开始，或傍晚开始且跨午夜 */
+  function isNightShift(sh) {
+    if (!sh || !sh.start) return false;
+    const [h] = sh.start.split(':').map(Number);
+    if (h >= 20) return true;
+    if (sh.end) {
+      const [eh] = sh.end.split(':').map(Number);
+      if (eh <= h && h >= 16) return true; // 跨午夜且傍晚开始，如 18:00-02:00
+    }
+    return false;
+  }
+
+  /** 已连续上班天数（含今天；今天休息则从昨天往前数） */
+  function workStreak() {
+    let s = 0;
+    const now = new Date();
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const sh = shiftOf(ymd(d));
+      if (sh && sh.start) s++;
+      else if (i === 0) continue; // 今天休息，继续往前看
+      else break;
+    }
+    return s;
+  }
+
+  /** 已连续休息天数（仅当天就是休息才计数） */
+  function restStreak() {
+    const now = new Date();
+    const tsh = shiftOf(ymd(now));
+    if (!(tsh && !tsh.start)) return 0;
+    let s = 0;
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      const sh = shiftOf(ymd(d));
+      if (sh && !sh.start) s++;
+      else break;
+    }
+    return s;
+  }
+
+  /** 早班睡眠建议：下一个早班（上班点 ≤ 09:00）前，建议的就寝时间 */
+  function sleepAdvice() {
+    const now = new Date();
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      const sh = shiftOf(ymd(d));
+      if (sh && sh.start) {
+        const [h, m] = sh.start.split(':').map(Number);
+        if (h <= 9) {
+          // 就寝 = 上班 − 提前量 − 8h 睡眠 − 30min 缓冲
+          let bed = h * 60 + m - S.leadMinutes - 480 - 30;
+          if (bed < 0) bed += 1440;
+          return {
+            when: i === 0 ? '今天' : (i === 1 ? '明天' : '后天'),
+            start: sh.start,
+            bed: pad(Math.floor(bed / 60)) + ':' + pad(bed % 60)
+          };
+        }
+        return null; // 下一个是晚班，无需早睡提醒
       }
     }
     return null;
@@ -540,6 +696,8 @@
     const hol = holidayOf(today);
     if (hol) lines.push(hol.type === 'holiday' ? '🎉 今天是' + hol.name + '，放假休息～' : '⚠️ 今天' + hol.name + '调休上班，别忘啦');
     else lines.push('🎉 今天无特殊节假日');
+    const streak = workStreak();
+    if (streak >= 4) lines.push('💪 已连续上班 ' + streak + ' 天，注意休息别硬撑');
     return lines;
   }
 
@@ -640,7 +798,21 @@
       root.style.removeProperty('--grad-soft');
     }
     applyBgColor();
+    applyNightMode();
     renderHomeCards();
+  }
+  /** 夜班护眼红屏模式：off / manual / auto（夜班或夜间 22:00-06:00 自动开） */
+  function applyNightMode() {
+    const ov = $('#nightOverlay');
+    if (!ov) return;
+    let on = false;
+    if (S.nightMode === 'manual') on = true;
+    else if (S.nightMode === 'auto') {
+      const hr = new Date().getHours();
+      const sh = shiftOf(ymd(new Date()));
+      on = (hr >= 22 || hr < 6 || isNightShift(sh));
+    }
+    ov.style.display = on ? 'block' : 'none';
   }
   function applyBgColor() {
     const root = document.documentElement;
@@ -675,13 +847,15 @@
     if (!view) return;
     const weather = $('#weatherCard');
     const tips = $('#tipsCard');
+    const care = $('#careCard');
     if (weather) weather.remove();
     if (tips) tips.remove();
-    const seq = (S.homeCards && S.homeCards.length ? S.homeCards : ['hero', 'weather', 'tips'])
+    if (care) care.remove();
+    const seq = (S.homeCards && S.homeCards.length ? S.homeCards : ['hero', 'weather', 'tips', 'care'])
       .filter((x) => x !== 'hero');
     let anchor = $('#heroCard') || view;
     seq.forEach((id) => {
-      const el = id === 'weather' ? weather : id === 'tips' ? tips : null;
+      const el = id === 'weather' ? weather : id === 'tips' ? tips : id === 'care' ? care : null;
       if (el) { view.insertBefore(el, anchor.nextSibling); anchor = el; }
     });
   }
@@ -726,6 +900,7 @@
     const bgSel = $('#bgSel'); if (bgSel) bgSel.value = S.bgColor || 'aurora';
     const bgCustom = $('#bgCustom'); if (bgCustom) bgCustom.value = S.bgCustom || '#080a16';
     const bgCustomRow = $('#bgCustomRow'); if (bgCustomRow) bgCustomRow.style.display = (S.bgColor === 'custom') ? 'flex' : 'none';
+    const nightSel = $('#nightSel'); if (nightSel) nightSel.value = S.nightMode || 'off';
     renderHomeCardsEditor();
 
     const box = $('#shiftEditor');
@@ -780,8 +955,8 @@
     const box = $('#homeCardsBox');
     if (!box) return;
     box.innerHTML = '';
-    const labels = { weather: '天气与贴心提醒', tips: '今日贴心提醒' };
-    const configurable = ['weather', 'tips'];
+    const labels = { weather: '天气与贴心提醒', tips: '今日贴心提醒', care: '健康关怀' };
+    const configurable = ['weather', 'tips', 'care'];
     const saved = (S.homeCards && S.homeCards.length) ? S.homeCards : ['hero', 'weather', 'tips'];
     configurable.forEach((id) => {
       const shown = saved.includes(id);
@@ -851,6 +1026,8 @@
   });
   const bgCustom = $('#bgCustom');
   if (bgCustom) bgCustom.addEventListener('input', () => { S.bgCustom = bgCustom.value; save(); applyAppearance(); });
+  const nightSel = $('#nightSel');
+  if (nightSel) nightSel.addEventListener('change', () => { S.nightMode = nightSel.value; save(); applyNightMode(); });
 
   $('#btnAddShift').addEventListener('click', () => {
     const colors = ['#34d399', '#fb7185', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'];
@@ -1620,13 +1797,13 @@
     { icon: '🗂️', title: '多套班表随便切', text: '本班 / 替班 / 培训……顶部「班表」随时切换，每套独立保存、互不干扰。' }
   ];
   const MANUAL_SECTIONS = [
-    { t: '一、首页', h: '<p>顶部显示<b>今天的班次</b>和<b>上班 / 闹钟时间</b>；今天没排班会自动显示<b>下次排班</b>还有几天。</p><p>下方还有<b>本周排班条</b>（周一到周日，今天高亮）、天气、节假日贴心提醒。这些卡片在「设置 → 首页显示」里可勾选 / 排序。</p>' },
+    { t: '一、首页', h: '<p>顶部显示<b>今天的班次</b>和<b>上班 / 闹钟时间</b>；今天没排班会自动显示<b>下次排班</b>还有几天。</p><p>上班期间，首页会多一条<b>实时下班倒计时</b>（一秒一跳，看着时间变小很有盼头）；任何时候都显示<b>距离下一个休息日还有几天</b>。</p><p>首页还有<b>健康关怀</b>卡：连续上班天数提醒、早班就寝建议、夜班护眼提示等。<b>本周排班条</b>（周一到周日，今天高亮）、天气、节假日贴心提醒也都在这。这些卡片在「设置 → 首页显示」里可勾选 / 排序。</p>' },
     { t: '二、排班', h: '<p>① 选一个班次后，日历上方有「连点」开关，开启后点日期直接刷班，批量排班很快。</p><p>②<b>循环生成</b>：在「循环规则」里排好顺序，一键铺满一个月；还能「保存为模板」下次套用。</p><p>③<b>复制上月排班到本月</b>：调休换班时一键搬运。</p><p>④ 还支持<b>导入文本 / 文件</b>（一行一个日期+班次）。</p>' },
     { t: '三、班次编辑', h: '<p>「设置 → 班次设置」里可增删班次、改<b>颜色 / 名称 / 上班时间 / 下班时间</b>。</p><p>点 ⧉ 可<b>克隆</b>一个相似班次，改名即可。工时统计按"下班 − 上班"计算，记得把上下班时间都填上。</p>' },
     { t: '四、闹钟与提醒', h: '<p>「设置」里调<b>提前多久响</b>。网页会在上班前提醒，但<b>锁屏后 iOS 会挂起页面</b>，睡眠场景不靠谱。</p><p>要锁屏也持续响，用排班页<b>「一键添加闹钟」</b>把排班写进 iPhone「提醒事项」（捷径先删当前班表旧提醒、再添加）。装捷径见「设置 → 换手机」。</p>' },
     { t: '五、多套班表', h: '<p>排班页顶部「班表」可切换<b>本班 / 替班 / 培训</b>等多套；点 ＋ 新建、⚙ 管理（改名 / 删除）。每套独立保存。</p><p>每套班表的提醒带独立前缀（如 <code>【班次闹钟·本班】</code>），导入某班表时捷径只删该班表旧提醒，互不误删。</p>' },
     { t: '六、本月统计与周报', h: '<p>排班页「本月统计」卡自动算出<b>上班天数 / 休息天数 / 总工时</b>及各班次天数分布（翻月刷新）。</p><p>点「🖼️ 导出本周排班图片」可生成本周图，直接发班组群。</p>' },
-    { t: '七、外观与背景', h: '<p>「设置 → 外观」可选<b>主题色</b>与<b>背景色</b>。主题色有 极光紫 / 日落橙 / 深海蓝 / 石墨灰 四套预设，也能选「自定义」用取色器挑任意颜色（会自动生成渐变，用于按钮、强调条等）。背景色有 紫 / 蓝 / 橙 / 绿 / 粉 / 黑 及「自定义」，切换时整页光晕会明显变化。</p>' },
+    { t: '七、外观与背景', h: '<p>「设置 → 外观」可选<b>主题色</b>与<b>背景色</b>。主题色有 极光紫 / 日落橙 / 深海蓝 / 石墨灰 四套预设，也能选「自定义」用取色器挑任意颜色（会自动生成渐变，用于按钮、强调条等）。背景色有 紫 / 蓝 / 橙 / 绿 / 粉 / 黑 及「自定义」，切换时整页光晕会明显变化。</p><p><b>夜班护眼模式</b>：同样在「外观」里，可选 关 / 手动开 / 夜班自动开。开启后整屏覆一层<b>红色滤镜</b>，保护暗视力、夜间不刺眼；「夜班自动开」会在夜班当天或夜间（22:00–06:00）自动启用，白天自动关。</p>' },
     { t: '八、备份与还原', h: '<p>「设置 → 数据」里<b>导出备份</b>存一份 JSON；换新手机用<b>导入备份</b>还原，排班不丢。</p><p>「彻底清除缓存」会重置全部数据，慎用。</p>' },
     { t: '九、把它当 App 用', h: '<p>iPhone Safari：点底部「分享」→「添加到主屏幕」。之后桌面多一个图标，点开即用，离线也能跑。</p>' }
   ];
@@ -1685,7 +1862,9 @@
     fetchWeather();   // 后台刷新天气
     if (!S.onboarded) showOnboarding();
 
-    setInterval(() => { renderHero(); }, 30000);
+    setInterval(() => { renderHero(); applyNightMode(); }, 30000);
+    liveTimer = setInterval(updateLiveClock, 1000);  // 首页下班倒计时每秒跳动
+    updateLiveClock();
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { notifyOnExit(); }
       else { exitNotified = false; renderAll(); }

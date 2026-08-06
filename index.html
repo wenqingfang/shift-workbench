@@ -21,6 +21,9 @@
   <span class="grain"></span>
 </div>
 
+<!-- 夜班护眼红屏滤镜（pointer-events:none，不挡操作） -->
+<div class="night-overlay" id="nightOverlay"></div>
+
 <main class="app">
 
   <!-- ===================== 首页 ===================== -->
@@ -44,6 +47,17 @@
         <div class="mini-card accent">
           <span class="mini-label">闹钟</span>
           <span class="mini-value" id="heroAlarm">--:--</span>
+        </div>
+      </div>
+
+      <div class="hero-status" id="heroStatus">
+        <div class="countdown live" id="liveClock" hidden>
+          <span class="cd-dot live-dot"></span>
+          <span id="liveClockText">上班中 · 正在计算下班时间…</span>
+        </div>
+        <div class="countdown rest" id="restInfo">
+          <span class="cd-dot rest-dot"></span>
+          <span>🛌 距离下一个休息日…</span>
         </div>
       </div>
 
@@ -82,6 +96,11 @@
       <div class="tips">
         <div class="tip" id="tipHoliday">🎉 今天无特殊节假日</div>
       </div>
+    </section>
+
+    <section class="card glass" id="careCard">
+      <div class="card-head"><h2>健康关怀</h2></div>
+      <div class="care-body" id="careBody"></div>
     </section>
   </section>
 
@@ -190,6 +209,14 @@
           <div class="field-inline" id="bgCustomRow" style="display:none"><label>自定义色</label>
             <input type="color" id="bgCustom" value="#080a16">
           </div>
+          <div class="field-inline"><label>夜班护眼</label>
+            <select id="nightSel" class="sel">
+              <option value="off">关</option>
+              <option value="manual">手动开</option>
+              <option value="auto">夜班自动开</option>
+            </select>
+          </div>
+          <p class="hint">夜班 / 夜间用红色滤镜保护暗视力、不刺眼。选「夜班自动开」会在夜班当天或夜间（22:00–06:00）自动启用，白天自动关。</p>
         </div>
 
         <div class="field">
