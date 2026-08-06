@@ -927,7 +927,7 @@
   }
   function sizeSnake() {
     const c = snake.c, wrap = c.parentElement;
-    const cssW = Math.min((wrap ? wrap.clientWidth : 320) || 320, Math.round((window.innerHeight || 640) * 0.38), 320);
+    const cssW = Math.min((wrap ? wrap.clientWidth : 320) || 320, 260, Math.round((window.innerHeight || 640) * 0.3));
     const dpr = window.devicePixelRatio || 1;
     c.style.width = cssW + 'px'; c.style.height = cssW + 'px';
     c.width = Math.round(cssW * dpr); c.height = Math.round(cssW * dpr);
@@ -968,7 +968,7 @@
       snake.score += 10;
       const sc = $('#snakeScore'); if (sc) sc.textContent = snake.score;
       placeFood();
-      if (snake.score % 50 === 0 && snake.speed > 110) {
+      if (snake.score % 50 === 0 && snake.speed > 190) {
         snake.speed -= 10;
         clearInterval(snake.timer); snake.timer = setInterval(stepSnake, snake.speed);
       }
@@ -992,7 +992,7 @@
     // 每次都重置，保证「开始 / 重新开始」一定生效
     snake.snake = [{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }];
     snake.dir = { x: 1, y: 0 }; snake.next = { x: 1, y: 0 };
-    snake.score = 0; snake.speed = 180; snake.food = null; snake.gameOver = false; placeFood();
+    snake.score = 0; snake.speed = 260; snake.food = null; snake.gameOver = false; placeFood();
     const sc = $('#snakeScore'); if (sc) sc.textContent = '0';
     snake.running = true;
     const st = $('#snakeStart'); if (st) st.textContent = '重新开始';
@@ -2094,6 +2094,13 @@
     if ('serviceWorker' in navigator &&
         location.protocol !== 'file:' &&
         !window.__SINGLE_FILE__) {
+      // 新版本接管后自动刷新一次，确保页面用上新缓存（解决「改了却看不到更新」）
+      let swRefreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (swRefreshing) return;
+        swRefreshing = true;
+        window.location.reload();
+      });
       navigator.serviceWorker.register('sw.js', { scope: './' })
         .then((reg) => {
           // 若已有新版在等待，立即激活

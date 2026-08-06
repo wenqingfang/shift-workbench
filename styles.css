@@ -163,10 +163,10 @@ input,textarea,select{font-family:inherit}
 .snake-canvas{border-radius:var(--r-md);background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);touch-action:none}
 .snake-ctrl{display:flex;flex-direction:column;align-items:center;gap:6px;margin:8px 0}
 .snake-ctrl-mid{display:flex;gap:6px}
-.snake-ctrl button{width:48px;height:42px;border-radius:12px;font-size:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-weight:700}
+.snake-ctrl button{width:42px;height:38px;border-radius:12px;font-size:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-weight:700}
 .snake-ctrl button:active{background:rgba(255,255,255,.18)}
-.snake-msg{margin-top:6px}
-#view-play .card:last-child{margin-bottom:12px}
+.snake-msg{margin-top:8px;color:var(--txt);font-size:13px;font-weight:500}
+#view-play .card:last-child{margin-bottom:calc(28px + var(--safe-b))}
 
 /* 本周排班小条 */
 .week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
