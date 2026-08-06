@@ -141,7 +141,7 @@ input,textarea,select{font-family:inherit}
 .care-item{font-size:13px;line-height:1.55;color:var(--txt-main);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:11px 13px}
 .care-item b{color:#ffd479;font-variant-numeric:tabular-nums}
 
-/* 夜班护眼红屏滤镜（pointer-events:none，不挡操作；盖住内容/底栏/抽屉，但不盖闹钟/引导/提示） */
+/* 护眼模式滤镜（pointer-events:none，不挡操作；盖住内容/底栏/抽屉，但不盖闹钟/引导/提示） */
 .night-overlay{position:fixed;inset:0;z-index:80;pointer-events:none;background:rgba(255,40,40,.22);mix-blend-mode:multiply;display:none}
 
 /* 本周排班小条 */

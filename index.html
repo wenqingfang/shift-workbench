@@ -21,7 +21,7 @@
   <span class="grain"></span>
 </div>
 
-<!-- 夜班护眼红屏滤镜（pointer-events:none，不挡操作） -->
+<!-- 护眼模式滤镜（pointer-events:none，不挡操作） -->
 <div class="night-overlay" id="nightOverlay"></div>
 
 <main class="app">
@@ -209,14 +209,14 @@
           <div class="field-inline" id="bgCustomRow" style="display:none"><label>自定义色</label>
             <input type="color" id="bgCustom" value="#080a16">
           </div>
-          <div class="field-inline"><label>夜班护眼</label>
+          <div class="field-inline"><label>护眼模式</label>
             <select id="nightSel" class="sel">
               <option value="off">关</option>
               <option value="manual">手动开</option>
-              <option value="auto">夜班自动开</option>
+              <option value="auto">自动（夜班/夜间）</option>
             </select>
           </div>
-          <p class="hint">夜班 / 夜间用红色滤镜保护暗视力、不刺眼。选「夜班自动开」会在夜班当天或夜间（22:00–06:00）自动启用，白天自动关。</p>
+          <p class="hint">夜间用红色滤镜保护暗视力、不刺眼。选「自动」会在夜班当天或夜间（22:00–06:00）自动启用，白天自动关。</p>
         </div>
 
         <div class="field">
