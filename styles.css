@@ -166,7 +166,7 @@ input,textarea,select{font-family:inherit}
 .snake-ctrl button{width:54px;height:50px;border-radius:13px;font-size:23px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;font-weight:700}
 .snake-ctrl button:active{background:rgba(255,255,255,.18)}
 .snake-msg{margin-top:8px;color:var(--txt);font-size:13px;font-weight:500}
-#view-play .card:last-child{margin-bottom:calc(28px + var(--safe-b))}
+#view-play .card:last-child{margin-bottom:calc(40px + var(--safe-b))}
 .snake-overlay{position:fixed;inset:0;z-index:90;display:none;place-items:center;padding:24px;background:rgba(4,5,14,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .snake-overlay.show{display:grid}
 .snake-over-box{width:100%;max-width:280px;background:rgba(20,22,40,.96);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:22px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
@@ -453,7 +453,7 @@ textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
 .hbadge.w{background:rgba(251,191,36,.2);color:#fcd34d;border:1px solid rgba(251,191,36,.45)}
 
 /* ============ 多视图 + 底部导航 ============ */
-.app{padding-bottom:calc(86px + var(--safe-b))}
+.app{padding-bottom:calc(130px + var(--safe-b))}
 .view{display:none}
 .view.active{display:flex;flex-direction:column;gap:14px;animation:viewIn .26s ease}
 @keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}

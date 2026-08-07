@@ -1,11 +1,8 @@
-# 不需要进版本库的文件
-dist/
-班次闹钟.html
-*.py
-.workbuddy/
-.deploy_token
-deploy.sh
-frames_out/
+# 分析用临时帧目录
+_frames/
 
-# Gitee 部署令牌（长期复用，切勿提交）
-.gitee_token
+# 构建/依赖目录（如后续引入）
+node_modules/
+dist/
+.DS_Store
+*.log
