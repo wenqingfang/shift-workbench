@@ -989,6 +989,11 @@
     const os = $('#snakeOverScore'); if (os) os.textContent = snake.score;
     const oh = $('#snakeOverHigh'); if (oh) oh.textContent = snake.high;
   }
+  function closeSnakeOver() {
+    const ov = $('#snakeOver'); if (ov) { ov.classList.remove('show'); ov.setAttribute('hidden', ''); }
+    const m = $('#snakeMsg'); if (m) m.textContent = '游戏结束！得分 ' + (snake ? snake.score : 0) + '，点「开始」再来一局';
+    const st = $('#snakeStart'); if (st) st.textContent = '重新开始';
+  }
   function startSnake() {
     if (!snake) initSnake();
     stopSnake();
@@ -1062,6 +1067,8 @@
     const startBtn = $('#snakeStart'); if (startBtn) startBtn.addEventListener('click', startSnake);
     const pauseBtn = $('#snakePause'); if (pauseBtn) pauseBtn.addEventListener('click', pauseSnake);
     const againBtn = $('#snakeAgain'); if (againBtn) againBtn.addEventListener('click', startSnake);
+    const closeBtn = $('#snakeClose'); if (closeBtn) closeBtn.addEventListener('click', closeSnakeOver);
+    const ov2 = $('#snakeOver'); if (ov2) ov2.addEventListener('click', (e) => { if (e.target === ov2) closeSnakeOver(); });
     $$('#view-play .snake-ctrl button').forEach((b) => b.addEventListener('click', () => setDir(b.dataset.dir)));
     document.addEventListener('keydown', (e) => {
       if (curView !== 'play') return;

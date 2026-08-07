@@ -155,7 +155,7 @@ input,textarea,select{font-family:inherit}
 .care-item b{color:#ffd479;font-variant-numeric:tabular-nums}
 
 /* 护眼模式滤镜（pointer-events:none，不挡操作；盖住内容/底栏/抽屉，但不盖闹钟/引导/提示） */
-.night-overlay{position:fixed;inset:0;z-index:80;pointer-events:none;background:rgba(255,40,40,.22);mix-blend-mode:multiply;display:none}
+.night-overlay{position:fixed;inset:0;z-index:80;pointer-events:none;background:rgba(255,28,28,.20);display:none}
 
 /* ============ 玩 · 睡意测试 + 贪吃蛇 ============ */
 .page-head{margin:2px 2px 0}
@@ -176,7 +176,7 @@ input,textarea,select{font-family:inherit}
 .snake-canvas{border-radius:var(--r-md);background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);touch-action:none}
 .snake-ctrl{display:flex;flex-direction:column;align-items:center;gap:6px;margin:8px 0}
 .snake-ctrl-mid{display:flex;gap:6px}
-.snake-ctrl button{width:42px;height:38px;border-radius:12px;font-size:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-weight:700}
+.snake-ctrl button{width:54px;height:50px;border-radius:13px;font-size:23px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;font-weight:700}
 .snake-ctrl button:active{background:rgba(255,255,255,.18)}
 .snake-msg{margin-top:8px;color:var(--txt);font-size:13px;font-weight:500}
 #view-play .card:last-child{margin-bottom:calc(28px + var(--safe-b))}
@@ -188,7 +188,9 @@ input,textarea,select{font-family:inherit}
 .so-row{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--txt-dim);padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.07)}
 .so-row b{font-size:19px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
 .so-tip{font-size:11.5px;color:var(--txt-faint);line-height:1.55;margin:13px 0 15px}
+.snake-over-box .btn-line{min-height:52px;font-size:16px;font-weight:700;width:100%}
 #snakeAgain{width:100%}
+#snakeClose{width:100%;margin-top:10px}
 
 /* 本周排班小条 */
 .week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
@@ -320,7 +322,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 .se .del{color:#ff7b93}
 .se .clone{color:#9ae7ff}
 .se.off .se-times input[type=time]{opacity:.3;pointer-events:none}
-.btn-line{padding:11px;border-radius:var(--r-sm);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);font-size:13.5px;font-weight:600;flex:1;transition:.15s}
+.btn-line{padding:13px;border-radius:var(--r-sm);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);font-size:14px;font-weight:600;flex:1;min-height:48px;transition:.15s}
 .btn-line:active{transform:scale(.97);background:rgba(255,255,255,.14)}
 .btn-line.danger{color:#ff7b93;border-color:rgba(255,123,147,.25)}
 .btn-row{display:flex;flex-wrap:wrap;gap:8px}
@@ -898,6 +900,7 @@ window.__SINGLE_FILE__ = true;
       <div class="so-row"><span>最高纪录</span><b id="snakeOverHigh">0</b></div>
       <p class="so-tip">📱 手机：滑动屏幕或点下方方向键　💻 电脑：方向键<br>撞墙或咬到自己即结束</p>
       <button class="btn-line grad" id="snakeAgain">再来一局</button>
+      <button class="btn-line" id="snakeClose">关闭</button>
     </div>
   </div>
 </section>
@@ -2052,6 +2055,11 @@ window.__SINGLE_FILE__ = true;
     const os = $('#snakeOverScore'); if (os) os.textContent = snake.score;
     const oh = $('#snakeOverHigh'); if (oh) oh.textContent = snake.high;
   }
+  function closeSnakeOver() {
+    const ov = $('#snakeOver'); if (ov) { ov.classList.remove('show'); ov.setAttribute('hidden', ''); }
+    const m = $('#snakeMsg'); if (m) m.textContent = '游戏结束！得分 ' + (snake ? snake.score : 0) + '，点「开始」再来一局';
+    const st = $('#snakeStart'); if (st) st.textContent = '重新开始';
+  }
   function startSnake() {
     if (!snake) initSnake();
     stopSnake();
@@ -2125,6 +2133,8 @@ window.__SINGLE_FILE__ = true;
     const startBtn = $('#snakeStart'); if (startBtn) startBtn.addEventListener('click', startSnake);
     const pauseBtn = $('#snakePause'); if (pauseBtn) pauseBtn.addEventListener('click', pauseSnake);
     const againBtn = $('#snakeAgain'); if (againBtn) againBtn.addEventListener('click', startSnake);
+    const closeBtn = $('#snakeClose'); if (closeBtn) closeBtn.addEventListener('click', closeSnakeOver);
+    const ov2 = $('#snakeOver'); if (ov2) ov2.addEventListener('click', (e) => { if (e.target === ov2) closeSnakeOver(); });
     $$('#view-play .snake-ctrl button').forEach((b) => b.addEventListener('click', () => setDir(b.dataset.dir)));
     document.addEventListener('keydown', (e) => {
       if (curView !== 'play') return;
