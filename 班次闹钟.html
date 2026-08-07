@@ -174,11 +174,13 @@ input,textarea,select{font-family:inherit}
 .react-verdict{margin-top:8px;font-size:14px;font-weight:600;text-align:center;min-height:18px;color:#9ae7ff}
 .snake-wrap{display:flex;justify-content:center;margin:8px 0}
 .snake-canvas{border-radius:var(--r-md);background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);touch-action:none}
-.snake-ctrl{display:flex;flex-direction:column;align-items:center;gap:6px;margin:8px 0}
-.snake-ctrl-mid{display:flex;gap:6px}
-.snake-ctrl button{width:54px;height:50px;border-radius:13px;font-size:23px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;font-weight:700}
+.snake-ctrl{display:flex;justify-content:space-between;align-items:center;gap:24px;margin:10px 0;padding:0 16px}
+.snake-ctrl-col{display:flex;flex-direction:column;gap:10px}
+.snake-ctrl button{width:64px;height:60px;border-radius:16px;font-size:26px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;font-weight:700}
 .snake-ctrl button:active{background:rgba(255,255,255,.18)}
-.snake-msg{margin-top:8px;color:var(--txt);font-size:13px;font-weight:500}
+.snake-msg{margin-top:12px;color:var(--txt);font-size:13px;font-weight:500}
+#view-play .btn-row{margin-top:12px}
+#view-play .btn-row .btn-line{min-height:48px;font-size:15px;font-weight:700}
 #view-play .card:last-child{margin-bottom:calc(40px + var(--safe-b))}
 .snake-overlay{position:fixed;inset:0;z-index:90;display:none;place-items:center;padding:24px;background:rgba(4,5,14,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .snake-overlay.show{display:grid}
@@ -467,6 +469,7 @@ textarea:focus,input:focus{border-color:rgba(124,92,255,.6)}
 
 /* ============ 多视图 + 底部导航 ============ */
 .app{padding-bottom:calc(130px + var(--safe-b))}
+#view-play{padding-bottom:calc(180px + var(--safe-b))}
 .view{display:none}
 .view.active{display:flex;flex-direction:column;gap:14px;animation:viewIn .26s ease}
 @keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -877,10 +880,12 @@ window.__SINGLE_FILE__ = true;
       <canvas id="snakeCanvas" class="snake-canvas"></canvas>
     </div>
     <div class="snake-ctrl">
-      <button data-dir="up">↑</button>
-      <div class="snake-ctrl-mid">
-        <button data-dir="left">←</button>
+      <div class="snake-ctrl-col">
+        <button data-dir="up">↑</button>
         <button data-dir="down">↓</button>
+      </div>
+      <div class="snake-ctrl-col">
+        <button data-dir="left">←</button>
         <button data-dir="right">→</button>
       </div>
     </div>
