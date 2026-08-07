@@ -180,6 +180,15 @@ input,textarea,select{font-family:inherit}
 .snake-ctrl button:active{background:rgba(255,255,255,.18)}
 .snake-msg{margin-top:8px;color:var(--txt);font-size:13px;font-weight:500}
 #view-play .card:last-child{margin-bottom:calc(28px + var(--safe-b))}
+.snake-overlay{position:fixed;inset:0;z-index:90;display:none;place-items:center;padding:24px;background:rgba(4,5,14,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.snake-overlay.show{display:grid}
+.snake-over-box{width:100%;max-width:280px;background:rgba(20,22,40,.96);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:22px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.so-emoji{font-size:42px;margin-bottom:2px}
+.snake-over-box h3{font-size:18px;margin-bottom:14px;color:var(--txt)}
+.so-row{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--txt-dim);padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.07)}
+.so-row b{font-size:19px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.so-tip{font-size:11.5px;color:var(--txt-faint);line-height:1.55;margin:13px 0 15px}
+#snakeAgain{width:100%}
 
 /* 本周排班小条 */
 .week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
@@ -877,8 +886,20 @@ window.__SINGLE_FILE__ = true;
       <button class="btn-line" id="snakeStart">开始</button>
       <button class="btn-line" id="snakePause" disabled>暂停</button>
     </div>
-    <p class="muted center snake-msg" id="snakeMsg">手机可滑动屏幕控制方向</p>
+    <p class="muted center snake-msg" id="snakeMsg">📱 手机：滑动屏幕或点下方方向键　💻 电脑：方向键</p>
   </section>
+
+  <!-- 贪吃蛇 游戏结束弹窗 -->
+  <div class="snake-overlay" id="snakeOver" hidden>
+    <div class="snake-over-box">
+      <div class="so-emoji">🐍</div>
+      <h3>游戏结束</h3>
+      <div class="so-row"><span>本局得分</span><b id="snakeOverScore">0</b></div>
+      <div class="so-row"><span>最高纪录</span><b id="snakeOverHigh">0</b></div>
+      <p class="so-tip">📱 手机：滑动屏幕或点下方方向键　💻 电脑：方向键<br>撞墙或咬到自己即结束</p>
+      <button class="btn-line grad" id="snakeAgain">再来一局</button>
+    </div>
+  </div>
 </section>
 
 <!-- ===================== 底部导航 ===================== -->
@@ -2025,12 +2046,16 @@ window.__SINGLE_FILE__ = true;
       snake.high = snake.score; localStorage.setItem('sw_snakeHigh', String(snake.score));
       const h = $('#snakeHigh'); if (h) h.textContent = snake.high;
     }
-    const m = $('#snakeMsg'); if (m) m.textContent = '游戏结束！得分 ' + snake.score + '，点「开始」再来一局';
+    const m = $('#snakeMsg'); if (m) m.textContent = '游戏结束！点「再来一局」';
     const p = $('#snakePause'); if (p) { p.disabled = true; }
+    const ov = $('#snakeOver'); if (ov) { ov.classList.add('show'); ov.removeAttribute('hidden'); }
+    const os = $('#snakeOverScore'); if (os) os.textContent = snake.score;
+    const oh = $('#snakeOverHigh'); if (oh) oh.textContent = snake.high;
   }
   function startSnake() {
     if (!snake) initSnake();
     stopSnake();
+    const ov = $('#snakeOver'); if (ov) { ov.classList.remove('show'); ov.setAttribute('hidden', ''); }
     // 每次都重置，保证「开始 / 重新开始」一定生效
     snake.snake = [{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }];
     snake.dir = { x: 1, y: 0 }; snake.next = { x: 1, y: 0 };
@@ -2099,7 +2124,8 @@ window.__SINGLE_FILE__ = true;
     }
     const startBtn = $('#snakeStart'); if (startBtn) startBtn.addEventListener('click', startSnake);
     const pauseBtn = $('#snakePause'); if (pauseBtn) pauseBtn.addEventListener('click', pauseSnake);
-    $$('#snakeCtrl button').forEach((b) => b.addEventListener('click', () => setDir(b.dataset.dir)));
+    const againBtn = $('#snakeAgain'); if (againBtn) againBtn.addEventListener('click', startSnake);
+    $$('#view-play .snake-ctrl button').forEach((b) => b.addEventListener('click', () => setDir(b.dataset.dir)));
     document.addEventListener('keydown', (e) => {
       if (curView !== 'play') return;
       const m = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };

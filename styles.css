@@ -167,6 +167,15 @@ input,textarea,select{font-family:inherit}
 .snake-ctrl button:active{background:rgba(255,255,255,.18)}
 .snake-msg{margin-top:8px;color:var(--txt);font-size:13px;font-weight:500}
 #view-play .card:last-child{margin-bottom:calc(28px + var(--safe-b))}
+.snake-overlay{position:fixed;inset:0;z-index:90;display:none;place-items:center;padding:24px;background:rgba(4,5,14,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.snake-overlay.show{display:grid}
+.snake-over-box{width:100%;max-width:280px;background:rgba(20,22,40,.96);border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:22px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.so-emoji{font-size:42px;margin-bottom:2px}
+.snake-over-box h3{font-size:18px;margin-bottom:14px;color:var(--txt)}
+.so-row{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--txt-dim);padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.07)}
+.so-row b{font-size:19px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.so-tip{font-size:11.5px;color:var(--txt-faint);line-height:1.55;margin:13px 0 15px}
+#snakeAgain{width:100%}
 
 /* 本周排班小条 */
 .week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}

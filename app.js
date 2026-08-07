@@ -983,12 +983,16 @@
       snake.high = snake.score; localStorage.setItem('sw_snakeHigh', String(snake.score));
       const h = $('#snakeHigh'); if (h) h.textContent = snake.high;
     }
-    const m = $('#snakeMsg'); if (m) m.textContent = '游戏结束！得分 ' + snake.score + '，点「开始」再来一局';
+    const m = $('#snakeMsg'); if (m) m.textContent = '游戏结束！点「再来一局」';
     const p = $('#snakePause'); if (p) { p.disabled = true; }
+    const ov = $('#snakeOver'); if (ov) { ov.classList.add('show'); ov.removeAttribute('hidden'); }
+    const os = $('#snakeOverScore'); if (os) os.textContent = snake.score;
+    const oh = $('#snakeOverHigh'); if (oh) oh.textContent = snake.high;
   }
   function startSnake() {
     if (!snake) initSnake();
     stopSnake();
+    const ov = $('#snakeOver'); if (ov) { ov.classList.remove('show'); ov.setAttribute('hidden', ''); }
     // 每次都重置，保证「开始 / 重新开始」一定生效
     snake.snake = [{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }];
     snake.dir = { x: 1, y: 0 }; snake.next = { x: 1, y: 0 };
@@ -1057,7 +1061,8 @@
     }
     const startBtn = $('#snakeStart'); if (startBtn) startBtn.addEventListener('click', startSnake);
     const pauseBtn = $('#snakePause'); if (pauseBtn) pauseBtn.addEventListener('click', pauseSnake);
-    $$('#snakeCtrl button').forEach((b) => b.addEventListener('click', () => setDir(b.dataset.dir)));
+    const againBtn = $('#snakeAgain'); if (againBtn) againBtn.addEventListener('click', startSnake);
+    $$('#view-play .snake-ctrl button').forEach((b) => b.addEventListener('click', () => setDir(b.dataset.dir)));
     document.addEventListener('keydown', (e) => {
       if (curView !== 'play') return;
       const m = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };

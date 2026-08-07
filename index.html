@@ -315,8 +315,20 @@
       <button class="btn-line" id="snakeStart">开始</button>
       <button class="btn-line" id="snakePause" disabled>暂停</button>
     </div>
-    <p class="muted center snake-msg" id="snakeMsg">手机可滑动屏幕控制方向</p>
+    <p class="muted center snake-msg" id="snakeMsg">📱 手机：滑动屏幕或点下方方向键　💻 电脑：方向键</p>
   </section>
+
+  <!-- 贪吃蛇 游戏结束弹窗 -->
+  <div class="snake-overlay" id="snakeOver" hidden>
+    <div class="snake-over-box">
+      <div class="so-emoji">🐍</div>
+      <h3>游戏结束</h3>
+      <div class="so-row"><span>本局得分</span><b id="snakeOverScore">0</b></div>
+      <div class="so-row"><span>最高纪录</span><b id="snakeOverHigh">0</b></div>
+      <p class="so-tip">📱 手机：滑动屏幕或点下方方向键　💻 电脑：方向键<br>撞墙或咬到自己即结束</p>
+      <button class="btn-line grad" id="snakeAgain">再来一局</button>
+    </div>
+  </div>
 </section>
 
 <!-- ===================== 底部导航 ===================== -->
