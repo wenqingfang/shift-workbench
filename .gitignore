@@ -1,6 +1,19 @@
 # 分析用临时帧目录
 _frames/
 
+# 历史辅助脚本（不再入仓）
+deploy.sh
+deploy_gitee.py
+push_via_api.py
+update_via_api.py
+gen_qr.py
+make_icons.py
+
+# Token / 密钥文件
+*.token
+.gitee_token
+.deploy_token
+
 # 构建/依赖目录（如后续引入）
 node_modules/
 dist/

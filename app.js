@@ -932,12 +932,16 @@
     c.style.width = cssW + 'px'; c.style.height = cssW + 'px';
     c.width = Math.round(cssW * dpr); c.height = Math.round(cssW * dpr);
     snake.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    snake.cssW = cssW;
     snake.size = cssW / snake.GRID;
   }
   function drawSnake() {
     const G = snake, ctx = G.ctx, size = G.size, body = G.snake, food = G.food;
-    const W = G.c.clientWidth;
-    ctx.clearRect(0, 0, W, W);
+    const W = G.cssW || G.c.clientWidth;
+    // 先以单位矩阵按实际像素尺寸清屏，彻底避免 DPR/取整导致的边缘残影
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, G.c.width, G.c.height);
+    ctx.setTransform(window.devicePixelRatio || 1, 0, 0, window.devicePixelRatio || 1, 0, 0);
     ctx.fillStyle = 'rgba(255,255,255,0.03)';
     ctx.fillRect(0, 0, W, W);
     if (food) {
